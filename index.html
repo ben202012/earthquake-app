@@ -156,6 +156,23 @@
 
     <div class="error-message" id="error-message"></div>
 
+    <!-- 地震詳細モーダル -->
+    <div class="modal-overlay" id="earthquake-modal-overlay">
+        <div class="earthquake-modal" id="earthquake-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">地震詳細情報</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- 詳細情報がここに動的に挿入される -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="modal-close-btn">閉じる</button>
+                <button class="modal-button primary" id="modal-map-focus">地図で確認</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="config.js"></script>
     <script src="earthquake-api.js"></script>

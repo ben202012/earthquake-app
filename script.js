@@ -14,6 +14,7 @@ class EarthquakeApp {
             lastActivity: null
         };
         this.activityFeed = [];
+        this.currentModalData = null;
         
         this.elements = {
             p2pStatus: null,
@@ -55,6 +56,7 @@ class EarthquakeApp {
             this.loadHistory();
             this.updateDashboardStats();
             this.addActivityFeedItem('🟢 地震監視システム開始', 'info');
+            this.setupModalEventListeners();
             
             console.log('EarthquakeApp initialized successfully');
             
@@ -323,6 +325,14 @@ class EarthquakeApp {
             card.classList.add('urgent');
         }
 
+        // JMAデータの場合はクリック可能にする
+        if (data.source === 'jma') {
+            card.classList.add('clickable');
+            card.addEventListener('click', () => {
+                this.showEarthquakeModal(data);
+            });
+        }
+
         const time = data.time.toLocaleString('ja-JP', {
             year: 'numeric',
             month: '2-digit',
@@ -572,6 +582,10 @@ class EarthquakeApp {
         return intensityMap[intensity] || '-';
     }
 
+    convertP2PIntensity(scale) {
+        return CONFIG.INTENSITY_SCALE_MAP[scale] || '不明';
+    }
+
     updateDashboardDisplay() {
         const todayElement = document.getElementById('today-count');
         const weekElement = document.getElementById('week-count');
@@ -642,6 +656,153 @@ class EarthquakeApp {
             eewMessage.style.color = '';
             eewMessage.style.fontWeight = '';
         }
+    }
+
+    setupModalEventListeners() {
+        const modalOverlay = document.getElementById('earthquake-modal-overlay');
+        const modalClose = document.getElementById('modal-close');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const modalMapFocus = document.getElementById('modal-map-focus');
+
+        // オーバーレイクリックで閉じる
+        modalOverlay?.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                this.closeEarthquakeModal();
+            }
+        });
+
+        // 閉じるボタン
+        modalClose?.addEventListener('click', () => {
+            this.closeEarthquakeModal();
+        });
+
+        modalCloseBtn?.addEventListener('click', () => {
+            this.closeEarthquakeModal();
+        });
+
+        // 地図で確認ボタン
+        modalMapFocus?.addEventListener('click', () => {
+            if (this.currentModalData && this.map) {
+                this.map.displayEarthquake(this.currentModalData);
+                this.closeEarthquakeModal();
+            }
+        });
+
+        // Escキーで閉じる
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeEarthquakeModal();
+            }
+        });
+    }
+
+    showEarthquakeModal(data) {
+        this.currentModalData = data;
+        const modalOverlay = document.getElementById('earthquake-modal-overlay');
+        const modalBody = document.getElementById('modal-body');
+
+        if (!modalOverlay || !modalBody) return;
+
+        // モーダル内容を生成
+        modalBody.innerHTML = this.generateModalContent(data);
+
+        // モーダルを表示
+        modalOverlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeEarthquakeModal() {
+        const modalOverlay = document.getElementById('earthquake-modal-overlay');
+        if (!modalOverlay) return;
+
+        modalOverlay.classList.remove('show');
+        document.body.style.overflow = '';
+        this.currentModalData = null;
+    }
+
+    generateModalContent(data) {
+        const time = data.time.toLocaleString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            weekday: 'long'
+        });
+
+        const magnitude = data.magnitude ? data.magnitude.toFixed(1) : '不明';
+        const depth = data.depth ? `${data.depth}km` : '不明';
+        const intensity = data.maxIntensity || '不明';
+        const location = data.location || '不明';
+
+        let intensityDistribution = '';
+        if (data.areas && data.areas.length > 0) {
+            const intensityTags = data.areas.map(area => 
+                `<span class="intensity-tag">${area.pref || area.addr}: 震度${area.scale ? this.convertP2PIntensity(area.scale) : area.intensity || '?'}</span>`
+            ).join('');
+            
+            intensityDistribution = `
+                <div class="intensity-distribution">
+                    <div class="detail-label">震度分布</div>
+                    <div class="intensity-list">${intensityTags}</div>
+                </div>
+            `;
+        }
+
+        const tsunamiAlert = data.tsunami ? `
+            <div class="tsunami-alert">
+                🌊 津波に関する情報が発表されています
+            </div>
+        ` : '';
+
+        return `
+            <div class="detail-section">
+                <div class="detail-title">📍 基本情報</div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">発生時刻</div>
+                        <div class="detail-value">${time}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">震源地</div>
+                        <div class="detail-value">${location}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">マグニチュード</div>
+                        <div class="detail-value magnitude">M${magnitude}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">深さ</div>
+                        <div class="detail-value">${depth}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">最大震度</div>
+                        <div class="detail-value intensity">震度${intensity}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">座標</div>
+                        <div class="detail-value">${data.latitude ? `${data.latitude.toFixed(3)}, ${data.longitude.toFixed(3)}` : '不明'}</div>
+                    </div>
+                </div>
+                ${intensityDistribution}
+                ${tsunamiAlert}
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-title">📊 データ詳細</div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">情報源</div>
+                        <div class="detail-value">${data.source === 'jma' ? 'P2P地震情報 (履歴)' : 'P2P地震情報 (リアルタイム)'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">更新時刻</div>
+                        <div class="detail-value">${new Date().toLocaleTimeString('ja-JP')}</div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     getStatus() {

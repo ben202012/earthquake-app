@@ -49,10 +49,15 @@ technical_specification.md # 技術仕様書
 #### 2.1.2 画面レイアウト
 - **ヘッダー**: アプリタイトル、接続状態表示、設定ボタン
 - **左側パネル（60%）**:
-  - **上部**: P2P地震情報リアルタイム表示
-  - **下部**: P2P履歴情報表示
+  - **上部 P2Pパネル**: 
+    - 緊急地震速報ステータス表示（`eew-status`）
+    - 日本列島地震活動状況ダッシュボード（`japan-status-dashboard`）
+    - リアルタイム活動フィード（`activity-feed`）
+    - レーダーパルス監視アニメーション
+  - **下部 JMAパネル**: 直近10件の地震履歴情報表示（クリック可能カード）
 - **右側パネル（40%）**: インタラクティブ地図（Leaflet.js）
 - **サイドバー**: 設定パネル（スライド式表示/非表示）
+- **モーダルウィンドウ**: 地震詳細情報表示（JMAカードクリック時）
 
 ### 2.2 データ管理
 
@@ -64,9 +69,10 @@ technical_specification.md # 技術仕様書
 | `connection_status` | 接続状態 | `{p2p: true, jma: false}` |
 
 #### 2.2.2 メモリ管理
-- **最大履歴件数**: 50件
+- **最大履歴件数**: 50件（メモリ）、10件（表示）
 - **自動削除**: 1週間以上経過したデータ
 - **キャッシュ**: APIレスポンスの一時保存
+- **統計データ**: 日次・週次地震活動統計をリアルタイム更新
 
 ## 3. API仕様
 
@@ -113,7 +119,7 @@ wss://api.p2pquake.net/v2/ws
 
 #### 3.2.1 エンドポイント
 ```
-https://api.p2pquake.net/v2/history?codes=551&limit=1
+https://api.p2pquake.net/v2/history?codes=551&limit=10
 ```
 
 #### 3.2.2 取得方式
@@ -167,14 +173,26 @@ websocket.onmessage = (event) => {
     updateMap(data);
     checkNotificationConditions(data);
     saveToHistory(data);
+    // 緊急地震速報チェック
+    checkEEWStatus(data);
+    // 活動統計更新
+    updateDashboardStats();
+    // 活動フィード追加
+    addActivityFeedItem(`🔴 地震発生: ${data.location}`, 'earthquake');
+  }
+  if (data.code === 556 || data.code === 557) { // 緊急地震速報
+    updateEEWStatus(data);
+    addActivityFeedItem('🚨 緊急地震速報が発信されました', 'warning');
   }
 };
 
-// P2P履歴情報（定期取得）
+// P2P履歴情報（定期取得・10件）
 setInterval(async () => {
-  const data = await fetchP2PHistoryData();
-  updateJMAPanel(data); // 実際はP2P履歴データ
-  updateMap(data);
+  const data = await fetchP2PHistoryData(); // limit=10
+  updateJMAPanel(data); // 10件のクリック可能カード表示
+  if (data.length > 0) {
+    updateMap(data[0]); // 最新データで地図更新
+  }
 }, 60000);
 ```
 
@@ -340,14 +358,84 @@ lsof -ti:8080 | xargs kill -9
 - **ドメイン**: 年間$10-15（独自ドメイン使用時）
 - **開発ツール**: 無料（VS Code等）
 
-## 11. 今後の技術的拡張
+## 11. 新機能技術詳細
 
-### 11.1 機能拡張
+### 11.1 モーダル詳細表示機能
+
+#### 11.1.1 技術実装
+- **HTML構造**: `modal-overlay` > `earthquake-modal` > `modal-header|body|footer`
+- **CSS**: Glassmorphism効果、backdrop-filter、fade/slide アニメーション
+- **JavaScript**: `showEarthquakeModal()`, `closeEarthquakeModal()`, `generateModalContent()`
+- **イベント処理**: クリック、ESCキー、オーバーレイクリックでの閉じる機能
+
+#### 11.1.2 表示データ
+```javascript
+// モーダル表示データ例
+{
+  基本情報: {
+    発生時刻: "2024-XX-XX XX:XX:XX (曜日)",
+    震源地: "千葉県東方沖",
+    マグニチュード: "M4.2",
+    深さ: "60km",
+    最大震度: "震度3",
+    座標: "35.700, 140.800"
+  },
+  震度分布: [
+    { pref: "千葉県", addr: "千葉市", intensity: "3" },
+    { pref: "東京都", addr: "千代田区", intensity: "2" }
+  ],
+  津波情報: "津波に関する情報が発表されています"
+}
+```
+
+### 11.2 P2P視覚強化機能
+
+#### 11.2.1 緊急地震速報ステータス
+```css
+.eew-status {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+}
+.eew-icon {
+  animation: sparkle 3s infinite;
+}
+```
+
+#### 11.2.2 活動統計ダッシュボード
+```javascript
+// 統計データ構造
+dashboardStats: {
+  todayCount: 0,      // 今日の地震数
+  weekCount: 0,       // 今週の地震数  
+  maxIntensity: '-',  // 最大震度
+  activeRegions: '-', // 活発地域数
+  lastActivity: null  // 最終活動時刻
+}
+```
+
+### 11.3 テスト機能拡張
+
+#### 11.3.1 test.html新機能
+- **モーダルテスト**: `testModal()`関数で模擬データによるモーダル表示テスト
+- **詳細ログ**: アクション実行結果の時系列表示
+- **包括的テスト**: 接続、通知、音声、設定、地震シミュレート、モーダルの全機能テスト
+
+## 12. 今後の技術的拡張
+
+### 12.1 実装済み機能
+- ✅ **緊急地震速報対応**: EEWステータス表示・監視
+- ✅ **モーダル詳細表示**: クリック時の詳細情報表示
+- ✅ **活動統計ダッシュボード**: リアルタイム統計表示
+- ✅ **10件履歴表示**: 表示件数の拡張
+- ✅ **視覚的UI強化**: Glassmorphism、アニメーション効果
+
+### 12.2 今後の機能拡張
 - **PWA化**: Service Worker、オフライン対応
 - **地域フィルタリング**: ユーザー位置情報ベース
 - **カスタム通知音**: 音声ファイルアップロード機能
 
-### 11.2 技術改善
+### 12.3 技術改善
 - **TypeScript化**: 型安全性の向上
 - **モジュール分割**: ES6 Modules使用
 - **テスト導入**: Jest等でのユニットテスト

@@ -60,6 +60,7 @@
         <button onclick="testAudio()">音声テスト</button>
         <button onclick="testSettings()">設定テスト</button>
         <button onclick="simulateEarthquake()">地震シミュレート</button>
+        <button onclick="testModal()">モーダルテスト</button>
         <button onclick="toggleLog()">ログ表示/非表示</button>
         <button onclick="clearLog()">ログクリア</button>
     </div>
@@ -214,6 +215,23 @@
 
     <div class="error-message" id="error-message"></div>
 
+    <!-- 地震詳細モーダル -->
+    <div class="modal-overlay" id="earthquake-modal-overlay">
+        <div class="earthquake-modal" id="earthquake-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">地震詳細情報</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- 詳細情報がここに動的に挿入される -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="modal-close-btn">閉じる</button>
+                <button class="modal-button primary" id="modal-map-focus">地図で確認</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="config.js"></script>
     <script src="earthquake-api.js"></script>
@@ -314,6 +332,33 @@
                 log('模擬地震データを送信しました');
             } else {
                 log('アプリケーションが初期化されていません');
+            }
+        }
+
+        function testModal() {
+            log('モーダルテスト開始');
+            const mockJMAData = {
+                source: 'jma',
+                time: new Date(Date.now() - 30000), // 30秒前
+                location: '千葉県東方沖',
+                latitude: 35.7,
+                longitude: 140.8,
+                depth: 60,
+                magnitude: 4.2,
+                maxIntensity: '3',
+                tsunami: false,
+                areas: [
+                    { pref: '千葉県', addr: '千葉市', scale: 30, intensity: '3' },
+                    { pref: '東京都', addr: '千代田区', scale: 20, intensity: '2' },
+                    { pref: '神奈川県', addr: '横浜市', scale: 20, intensity: '2' }
+                ]
+            };
+
+            if (window.earthquakeApp && window.earthquakeApp.showEarthquakeModal) {
+                window.earthquakeApp.showEarthquakeModal(mockJMAData);
+                log('モーダルウィンドウを表示しました');
+            } else {
+                log('アプリケーションまたはモーダル機能が初期化されていません');
             }
         }
 
