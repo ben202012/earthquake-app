@@ -96,7 +96,239 @@ body {
     flex-direction: column;
 }
 
-.p2p-panel h2,
+/* P2Pパネル専用スタイル */
+.p2p-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.p2p-panel .panel-header {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.p2p-panel h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.realtime-badge {
+    background: #ff4757;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.monitoring-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.pulse-indicator {
+    width: 8px;
+    height: 8px;
+    background: #2ed573;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); opacity: 1; }
+    70% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(0.95); opacity: 1; }
+}
+
+/* 緊急地震速報ステータス */
+.eew-status {
+    margin: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.eew-indicator {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.eew-icon {
+    font-size: 1.5rem;
+    animation: sparkle 3s infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+.eew-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.eew-title {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.eew-message {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* 日本列島ダッシュボード */
+.japan-status-dashboard {
+    margin: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-title {
+    font-weight: bold;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.status-item {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    color: #ffd700;
+}
+
+.status-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+/* セクションタイトル */
+.section-title {
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+    padding: 0 1rem;
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+/* 最新地震情報 */
+.latest-earthquake {
+    margin: 1rem 0;
+}
+
+/* 接続アニメーション */
+.connection-animation {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.radar-pulse {
+    width: 60px;
+    height: 60px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    position: relative;
+    animation: radar-spin 2s linear infinite;
+}
+
+.radar-pulse::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: #ffd700;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes radar-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.connection-text {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    animation: fade-pulse 2s infinite;
+}
+
+@keyframes fade-pulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+/* アクティビティフィード */
+.activity-feed {
+    margin: 1rem 0;
+    flex: 1;
+}
+
+.activity-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0 1rem;
+}
+
+.activity-item {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #ffd700;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.activity-time {
+    opacity: 0.7;
+    font-size: 0.75rem;
+}
+
+/* JMAパネルスタイル調整 */
 .jma-panel h2 {
     background: #f8f9fa;
     padding: 1rem;
@@ -104,6 +336,7 @@ body {
     font-size: 1.2rem;
     font-weight: 600;
     border-bottom: 1px solid #e9ecef;
+    color: #333;
 }
 
 .earthquake-info {

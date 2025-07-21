@@ -26,9 +26,67 @@
     <main class="app-main">
         <div class="panels-container">
             <section class="p2p-panel" id="p2p-panel">
-                <h2>P2P地震情報</h2>
-                <div class="earthquake-info" id="p2p-info">
-                    <div class="no-data">接続中...</div>
+                <div class="panel-header">
+                    <h2>P2P地震情報 <span class="realtime-badge">LIVE</span></h2>
+                    <div class="monitoring-status" id="monitoring-status">
+                        <div class="pulse-indicator"></div>
+                        <span>監視中</span>
+                    </div>
+                </div>
+                
+                <!-- 緊急地震速報ステータス -->
+                <div class="eew-status" id="eew-status">
+                    <div class="eew-indicator">
+                        <div class="eew-icon">⚡</div>
+                        <div class="eew-text">
+                            <span class="eew-title">緊急地震速報</span>
+                            <span class="eew-message" id="eew-message">発信なし</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 日本列島活動状況ダッシュボード -->
+                <div class="japan-status-dashboard" id="japan-dashboard">
+                    <div class="dashboard-title">🗾 日本列島地震活動状況</div>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-value" id="today-count">0</div>
+                            <div class="status-label">今日の地震</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="week-count">0</div>
+                            <div class="status-label">今週の地震</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="max-intensity">-</div>
+                            <div class="status-label">最大震度</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="active-regions">-</div>
+                            <div class="status-label">活発地域</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最新地震情報 -->
+                <div class="latest-earthquake" id="latest-earthquake">
+                    <div class="section-title">📍 最新地震情報</div>
+                    <div class="earthquake-info" id="p2p-info">
+                        <div class="no-data">
+                            <div class="connection-animation">
+                                <div class="radar-pulse"></div>
+                                <div class="connection-text">地震監視システム起動中...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- アクティビティフィード -->
+                <div class="activity-feed" id="activity-feed">
+                    <div class="section-title">📊 リアルタイム活動</div>
+                    <div class="activity-list" id="activity-list">
+                        <!-- 動的に追加される -->
+                    </div>
                 </div>
             </section>
 

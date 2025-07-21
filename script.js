@@ -6,6 +6,14 @@ class EarthquakeApp {
         this.settings = CONFIG.DEFAULT_SETTINGS;
         this.earthquakeHistory = [];
         this.isSettingsOpen = false;
+        this.dashboardStats = {
+            todayCount: 0,
+            weekCount: 0,
+            maxIntensity: '-',
+            activeRegions: '-',
+            lastActivity: null
+        };
+        this.activityFeed = [];
         
         this.elements = {
             p2pStatus: null,
@@ -45,6 +53,8 @@ class EarthquakeApp {
             
             this.updateConnectionStatus();
             this.loadHistory();
+            this.updateDashboardStats();
+            this.addActivityFeedItem('🟢 地震監視システム開始', 'info');
             
             console.log('EarthquakeApp initialized successfully');
             
@@ -247,6 +257,18 @@ class EarthquakeApp {
                 this.addToHistory(data);
                 this.updateEarthquakeDisplay(data, source);
                 
+                // P2Pデータの場合、緊急地震速報チェックとアクティビティ追加
+                if (source === 'p2p') {
+                    this.checkEEWStatus(data.rawData || data);
+                    
+                    const magnitude = data.magnitude ? `M${data.magnitude.toFixed(1)}` : '';
+                    const intensity = data.maxIntensity ? `震度${data.maxIntensity}` : '';
+                    this.addActivityFeedItem(
+                        `🔴 地震発生: ${data.location} ${magnitude} ${intensity}`,
+                        'earthquake'
+                    );
+                }
+                
                 if (this.map) {
                     this.map.displayEarthquake(data);
                 }
@@ -255,6 +277,9 @@ class EarthquakeApp {
                     this.notification.notify(data);
                 }
             }
+            
+            // ダッシュボード統計を更新
+            this.updateDashboardStats();
             
             console.log(`${source.toUpperCase()} earthquake data processed:`, data);
             
@@ -497,12 +522,135 @@ class EarthquakeApp {
         }
     }
 
+    updateDashboardStats() {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+        let todayCount = 0;
+        let weekCount = 0;
+        let maxIntensity = 0;
+        const regions = new Set();
+
+        this.earthquakeHistory.forEach(earthquake => {
+            const earthquakeDate = new Date(earthquake.time);
+            
+            if (earthquakeDate >= today) {
+                todayCount++;
+            }
+            
+            if (earthquakeDate >= weekAgo) {
+                weekCount++;
+                
+                if (earthquake.location) {
+                    regions.add(earthquake.location.split('・')[0]); // 主要地域名を抽出
+                }
+                
+                const intensity = this.parseIntensity(earthquake.maxIntensity);
+                if (intensity > maxIntensity) {
+                    maxIntensity = intensity;
+                }
+            }
+        });
+
+        this.dashboardStats = {
+            todayCount,
+            weekCount,
+            maxIntensity: maxIntensity > 0 ? this.intensityToString(maxIntensity) : '-',
+            activeRegions: regions.size > 0 ? regions.size : '-',
+            lastActivity: this.earthquakeHistory.length > 0 ? this.earthquakeHistory[0].time : null
+        };
+
+        this.updateDashboardDisplay();
+    }
+
+    intensityToString(intensity) {
+        const intensityMap = {
+            1: '1', 2: '2', 3: '3', 4: '4',
+            5: '5弱', 6: '5強', 7: '6弱', 8: '6強', 9: '7'
+        };
+        return intensityMap[intensity] || '-';
+    }
+
+    updateDashboardDisplay() {
+        const todayElement = document.getElementById('today-count');
+        const weekElement = document.getElementById('week-count');
+        const intensityElement = document.getElementById('max-intensity');
+        const regionsElement = document.getElementById('active-regions');
+
+        if (todayElement) todayElement.textContent = this.dashboardStats.todayCount;
+        if (weekElement) weekElement.textContent = this.dashboardStats.weekCount;
+        if (intensityElement) intensityElement.textContent = this.dashboardStats.maxIntensity;
+        if (regionsElement) regionsElement.textContent = this.dashboardStats.activeRegions;
+    }
+
+    addActivityFeedItem(message, type = 'info') {
+        const timestamp = new Date();
+        const feedItem = {
+            message,
+            type,
+            timestamp
+        };
+
+        this.activityFeed.unshift(feedItem);
+        
+        // 最大20項目に制限
+        if (this.activityFeed.length > 20) {
+            this.activityFeed = this.activityFeed.slice(0, 20);
+        }
+
+        this.updateActivityFeedDisplay();
+    }
+
+    updateActivityFeedDisplay() {
+        const activityList = document.getElementById('activity-list');
+        if (!activityList) return;
+
+        activityList.innerHTML = '';
+        
+        this.activityFeed.slice(0, 10).forEach(item => {
+            const activityItem = document.createElement('div');
+            activityItem.className = `activity-item ${item.type}`;
+            
+            const timeStr = item.timestamp.toLocaleTimeString('ja-JP');
+            
+            activityItem.innerHTML = `
+                <div>${item.message}</div>
+                <div class="activity-time">${timeStr}</div>
+            `;
+            
+            activityList.appendChild(activityItem);
+        });
+    }
+
+    checkEEWStatus(data) {
+        const eewMessage = document.getElementById('eew-message');
+        if (!eewMessage) return;
+
+        // P2Pデータにより緊急地震速報の判定
+        // code 556: 緊急地震速報（予報）
+        // code 557: 緊急地震速報（警報）
+        if (data.code === 556 || data.code === 557) {
+            eewMessage.textContent = '発信中 - 強い揺れに警戒';
+            eewMessage.style.color = '#ff4757';
+            eewMessage.style.fontWeight = 'bold';
+            
+            this.addActivityFeedItem('🚨 緊急地震速報が発信されました', 'warning');
+        } else if (data.code === 551) {
+            // 通常の地震情報
+            eewMessage.textContent = '発信なし';
+            eewMessage.style.color = '';
+            eewMessage.style.fontWeight = '';
+        }
+    }
+
     getStatus() {
         return {
             api: this.api ? this.api.getConnectionStatus() : null,
             notification: this.notification ? this.notification.getPermissionStatus() : null,
             historyCount: this.earthquakeHistory.length,
-            settings: this.settings
+            settings: this.settings,
+            dashboardStats: this.dashboardStats
         };
     }
 }
