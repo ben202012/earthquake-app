@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地震速報アプリ - テストモード</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .test-controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 14px;
+        }
+        .test-controls button {
+            margin: 0.25rem;
+            padding: 0.5rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-controls button:hover {
+            background: #45a049;
+        }
+        .test-log {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 10000;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+        }
+        .test-log.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-controls">
+        <h4>テストコントロール</h4>
+        <button onclick="testP2PConnection()">P2P接続テスト</button>
+        <button onclick="testJMAConnection()">JMA接続テスト</button>
+        <button onclick="testNotification()">通知テスト</button>
+        <button onclick="testAudio()">音声テスト</button>
+        <button onclick="testSettings()">設定テスト</button>
+        <button onclick="simulateEarthquake()">地震シミュレート</button>
+        <button onclick="toggleLog()">ログ表示/非表示</button>
+        <button onclick="clearLog()">ログクリア</button>
+    </div>
+
+    <div class="test-log" id="test-log"></div>
+
+    <header class="app-header">
+        <h1>地震速報アプリ（テストモード）</h1>
+        <div class="connection-status">
+            <div class="status-indicator" id="p2p-status">
+                <span class="status-dot"></span>
+                P2P接続
+            </div>
+            <div class="status-indicator" id="jma-status">
+                <span class="status-dot"></span>
+                気象庁API
+            </div>
+        </div>
+        <button class="settings-toggle" id="settings-toggle">設定</button>
+    </header>
+
+    <main class="app-main">
+        <div class="panels-container">
+            <section class="p2p-panel" id="p2p-panel">
+                <h2>P2P地震情報</h2>
+                <div class="earthquake-info" id="p2p-info">
+                    <div class="no-data">接続中...</div>
+                </div>
+            </section>
+
+            <section class="jma-panel" id="jma-panel">
+                <h2>気象庁情報</h2>
+                <div class="earthquake-info" id="jma-info">
+                    <div class="no-data">データ取得中...</div>
+                </div>
+            </section>
+        </div>
+
+        <div class="map-container" id="map-container">
+            <div id="earthquake-map"></div>
+        </div>
+    </main>
+
+    <aside class="settings-sidebar" id="settings-sidebar">
+        <div class="settings-content">
+            <h3>設定</h3>
+            
+            <div class="setting-group">
+                <label for="magnitude-threshold">マグニチュード閾値</label>
+                <input type="range" id="magnitude-threshold" min="3" max="7" step="0.1" value="4.0">
+                <span id="magnitude-value">4.0</span>
+            </div>
+
+            <div class="setting-group">
+                <label for="intensity-threshold">震度閾値</label>
+                <select id="intensity-threshold">
+                    <option value="1">震度1</option>
+                    <option value="2">震度2</option>
+                    <option value="3" selected>震度3</option>
+                    <option value="4">震度4</option>
+                    <option value="5-">震度5弱</option>
+                    <option value="5+">震度5強</option>
+                    <option value="6-">震度6弱</option>
+                    <option value="6+">震度6強</option>
+                    <option value="7">震度7</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label for="notification-sound">通知音</label>
+                <input type="checkbox" id="notification-sound" checked>
+                <span>音声通知を有効にする</span>
+            </div>
+
+            <div class="setting-group">
+                <label for="volume-control">音量</label>
+                <input type="range" id="volume-control" min="0" max="100" value="50">
+                <span id="volume-value">50%</span>
+            </div>
+
+            <div class="setting-group">
+                <label for="auto-zoom">自動ズーム</label>
+                <input type="checkbox" id="auto-zoom" checked>
+                <span>地震発生時に地図を自動ズーム</span>
+            </div>
+
+            <div class="setting-group">
+                <button class="test-notification" id="test-notification">通知テスト</button>
+            </div>
+
+            <button class="reset-settings" id="reset-settings">設定をリセット</button>
+        </div>
+    </aside>
+
+    <div class="error-message" id="error-message"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <script src="earthquake-api.js"></script>
+    <script src="notification.js"></script>
+    <script src="map.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+        function log(message) {
+            const logElement = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[TEST] ${message}`);
+        }
+
+        function testP2PConnection() {
+            log('P2P接続テスト開始');
+            if (window.earthquakeApp && window.earthquakeApp.api) {
+                const status = window.earthquakeApp.api.getConnectionStatus();
+                log(`P2P接続状態: ${status.p2p ? '接続中' : '切断中'}`);
+            } else {
+                log('アプリケーションが初期化されていません');
+            }
+        }
+
+        function testJMAConnection() {
+            log('JMA接続テスト開始');
+            if (window.earthquakeApp && window.earthquakeApp.api) {
+                window.earthquakeApp.api.fetchJMAData();
+                log('JMAデータの取得を試行しました');
+            } else {
+                log('アプリケーションが初期化されていません');
+            }
+        }
+
+        function testNotification() {
+            log('通知テスト開始');
+            if (window.earthquakeApp && window.earthquakeApp.notification) {
+                window.earthquakeApp.notification.testNotification();
+                log('通知テストを実行しました');
+                
+                // 通知許可状態をチェック
+                const permStatus = window.earthquakeApp.notification.getPermissionStatus();
+                log(`通知許可: ${permStatus.permission}, 音声対応: ${permStatus.audio}`);
+            } else {
+                log('通知システムが初期化されていません');
+            }
+        }
+
+        function testAudio() {
+            log('音声テスト開始');
+            if (window.earthquakeApp && window.earthquakeApp.notification) {
+                // 直接音声再生をテスト（ユーザー操作により実行）
+                window.earthquakeApp.notification.playSound();
+                log('音声テストを実行しました');
+                
+                // AudioContextの状態をチェック
+                if (window.earthquakeApp.notification.audioContext) {
+                    log(`AudioContext状態: ${window.earthquakeApp.notification.audioContext.state}`);
+                } else {
+                    log('AudioContextが利用できません');
+                }
+            } else {
+                log('通知システムが初期化されていません');
+            }
+        }
+
+        function testSettings() {
+            log('設定テスト開始');
+            if (window.earthquakeApp) {
+                const status = window.earthquakeApp.getStatus();
+                log(`設定状態: ${JSON.stringify(status.settings, null, 2)}`);
+            } else {
+                log('アプリケーションが初期化されていません');
+            }
+        }
+
+        function simulateEarthquake() {
+            log('地震シミュレーション開始');
+            const mockData = {
+                source: 'test',
+                time: new Date(),
+                location: 'テスト震源地',
+                latitude: 35.6762,
+                longitude: 139.6503,
+                depth: 10,
+                magnitude: 5.5,
+                maxIntensity: '4',
+                tsunami: false,
+                points: [
+                    { pref: '東京都', addr: '新宿区', scale: 40 }
+                ]
+            };
+
+            if (window.earthquakeApp) {
+                window.earthquakeApp.handleEarthquakeData(mockData, 'test');
+                log('模擬地震データを送信しました');
+            } else {
+                log('アプリケーションが初期化されていません');
+            }
+        }
+
+        function toggleLog() {
+            const logElement = document.getElementById('test-log');
+            logElement.classList.toggle('show');
+        }
+
+        function clearLog() {
+            const logElement = document.getElementById('test-log');
+            logElement.innerHTML = '';
+        }
+
+        // アプリ初期化の監視
+        window.addEventListener('load', () => {
+            log('ページ読み込み完了');
+            setTimeout(() => {
+                if (window.earthquakeApp) {
+                    log('地震速報アプリが正常に初期化されました');
+                    log('テストコントロールボタンでテストを実行してください');
+                } else {
+                    log('エラー: 地震速報アプリの初期化に失敗しました');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

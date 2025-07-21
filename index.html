@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地震速報アプリ</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>地震速報アプリ</h1>
+        <div class="connection-status">
+            <div class="status-indicator" id="p2p-status">
+                <span class="status-dot"></span>
+                P2P接続
+            </div>
+            <div class="status-indicator" id="jma-status">
+                <span class="status-dot"></span>
+                気象庁API
+            </div>
+        </div>
+        <button class="settings-toggle" id="settings-toggle">設定</button>
+    </header>
+
+    <main class="app-main">
+        <div class="panels-container">
+            <section class="p2p-panel" id="p2p-panel">
+                <h2>P2P地震情報</h2>
+                <div class="earthquake-info" id="p2p-info">
+                    <div class="no-data">接続中...</div>
+                </div>
+            </section>
+
+            <section class="jma-panel" id="jma-panel">
+                <h2>気象庁情報</h2>
+                <div class="earthquake-info" id="jma-info">
+                    <div class="no-data">データ取得中...</div>
+                </div>
+            </section>
+        </div>
+
+        <div class="map-container" id="map-container">
+            <div id="earthquake-map"></div>
+        </div>
+    </main>
+
+    <aside class="settings-sidebar" id="settings-sidebar">
+        <div class="settings-content">
+            <h3>設定</h3>
+            
+            <div class="setting-group">
+                <label for="magnitude-threshold">マグニチュード閾値</label>
+                <input type="range" id="magnitude-threshold" min="3" max="7" step="0.1" value="4.0">
+                <span id="magnitude-value">4.0</span>
+            </div>
+
+            <div class="setting-group">
+                <label for="intensity-threshold">震度閾値</label>
+                <select id="intensity-threshold">
+                    <option value="1">震度1</option>
+                    <option value="2">震度2</option>
+                    <option value="3" selected>震度3</option>
+                    <option value="4">震度4</option>
+                    <option value="5-">震度5弱</option>
+                    <option value="5+">震度5強</option>
+                    <option value="6-">震度6弱</option>
+                    <option value="6+">震度6強</option>
+                    <option value="7">震度7</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label for="notification-sound">通知音</label>
+                <input type="checkbox" id="notification-sound" checked>
+                <span>音声通知を有効にする</span>
+            </div>
+
+            <div class="setting-group">
+                <label for="volume-control">音量</label>
+                <input type="range" id="volume-control" min="0" max="100" value="50">
+                <span id="volume-value">50%</span>
+            </div>
+
+            <div class="setting-group">
+                <label for="auto-zoom">自動ズーム</label>
+                <input type="checkbox" id="auto-zoom" checked>
+                <span>地震発生時に地図を自動ズーム</span>
+            </div>
+
+            <div class="setting-group">
+                <button class="test-notification" id="test-notification">通知テスト</button>
+            </div>
+
+            <button class="reset-settings" id="reset-settings">設定をリセット</button>
+        </div>
+    </aside>
+
+    <div class="error-message" id="error-message"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <script src="earthquake-api.js"></script>
+    <script src="notification.js"></script>
+    <script src="map.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
