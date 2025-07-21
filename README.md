@@ -22,8 +22,8 @@ PC向けWebベースの地震速報アプリケーション。リアルタイム
 # 1. ターミナル/コマンドプロンプトを開く
 
 # 2. アプリケーションフォルダに移動
-cd "/Users/matsuo/Desktop/Python App/Jisin -App"
-# Windowsの場合: cd "C:\path\to\Jisin -App"
+cd "/path/to/earthquake-app"
+# Windowsの場合: cd "C:\path\to\earthquake-app"
 
 # 3. HTTPサーバーを起動
 python3 -m http.server 8080

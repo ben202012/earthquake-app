@@ -259,7 +259,7 @@ git push origin main
 #### 9.1.1 ローカル起動（開発・テスト用）
 ```bash
 # 1. アプリケーションディレクトリに移動
-cd "/Users/matsuo/Desktop/Python App/Jisin -App"
+cd "/path/to/earthquake-app"
 
 # 2. Python HTTPサーバーを起動
 python3 -m http.server 8080
