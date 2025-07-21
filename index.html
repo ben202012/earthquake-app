@@ -48,17 +48,46 @@
                 <!-- 日本列島活動状況ダッシュボード -->
                 <div class="japan-status-dashboard" id="japan-dashboard">
                     <div class="dashboard-title">🗾 日本列島地震活動状況</div>
+                    
+                    <!-- リアルタイム時計とカウンター -->
+                    <div class="realtime-info">
+                        <div class="realtime-clock">
+                            <div class="clock-display" id="realtime-clock">--:--:--</div>
+                            <div class="clock-label">現在時刻</div>
+                        </div>
+                        <div class="uptime-counter">
+                            <div class="uptime-display" id="uptime-counter">00:00:00</div>
+                            <div class="uptime-label">監視時間</div>
+                        </div>
+                    </div>
+
+                    <!-- データメトリクス -->
+                    <div class="metrics-row">
+                        <div class="metric-item">
+                            <div class="metric-value pulse" id="api-response-time">0ms</div>
+                            <div class="metric-label">応答時間</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="last-update-time">未取得</div>
+                            <div class="metric-label">最終更新</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value counter-animation" id="data-packets">0</div>
+                            <div class="metric-label">受信データ</div>
+                        </div>
+                    </div>
+                    
                     <div class="status-grid">
                         <div class="status-item">
-                            <div class="status-value" id="today-count">0</div>
+                            <div class="status-value counter-animation" id="today-count">0</div>
                             <div class="status-label">今日の地震</div>
                         </div>
                         <div class="status-item">
-                            <div class="status-value" id="week-count">0</div>
+                            <div class="status-value counter-animation" id="week-count">0</div>
                             <div class="status-label">今週の地震</div>
                         </div>
                         <div class="status-item">
-                            <div class="status-value" id="max-intensity">-</div>
+                            <div class="status-value pulse" id="max-intensity">-</div>
                             <div class="status-label">最大震度</div>
                         </div>
                         <div class="status-item">
@@ -77,6 +106,22 @@
                                 <div class="radar-pulse"></div>
                                 <div class="connection-text">地震監視システム起動中...</div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ライブデータストリーム -->
+                <div class="live-data-stream" id="live-data-stream">
+                    <div class="section-title">
+                        📡 ライブデータストリーム
+                        <div class="stream-indicator">
+                            <div class="stream-dot"></div>
+                            <span class="stream-status">LIVE</span>
+                        </div>
+                    </div>
+                    <div class="stream-container">
+                        <div class="stream-scroll" id="live-stream-content">
+                            <!-- ライブストリームデータが流れる -->
                         </div>
                     </div>
                 </div>
@@ -155,6 +200,77 @@
     </aside>
 
     <div class="error-message" id="error-message"></div>
+
+    <!-- 緊急情報オーバーレイ -->
+    <div class="emergency-overlay" id="emergency-overlay">
+        <div class="emergency-alert">
+            <div class="alert-header">
+                <div class="alert-icon">🚨</div>
+                <div class="alert-title" id="alert-title">緊急地震速報</div>
+                <div class="alert-level" id="alert-level">WARNING</div>
+            </div>
+            
+            <div class="alert-content">
+                <div class="main-message" id="main-message">
+                    強い揺れが予想されます
+                </div>
+                <div class="sub-message" id="sub-message">
+                    すぐに安全な場所に避難してください
+                </div>
+                
+                <!-- カウントダウンタイマー -->
+                <div class="countdown-section" id="countdown-section">
+                    <div class="countdown-label">予想到達時間</div>
+                    <div class="countdown-timer" id="countdown-timer">--:--</div>
+                </div>
+                
+                <!-- 地震情報詳細 -->
+                <div class="emergency-details" id="emergency-details">
+                    <div class="detail-row">
+                        <span class="detail-label">震源地:</span>
+                        <span class="detail-value" id="emergency-location">---</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">マグニチュード:</span>
+                        <span class="detail-value" id="emergency-magnitude">M---</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">予想震度:</span>
+                        <span class="detail-value" id="emergency-intensity">震度---</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert-actions">
+                <div class="action-guide" id="action-guide">
+                    1. 頭を保護する　2. 机の下に隠れる　3. 出口を確保する
+                </div>
+                <button class="dismiss-button" id="dismiss-alert">確認しました</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 警戒レベルインジケーター -->
+    <div class="alert-level-indicator" id="alert-level-indicator">
+        <div class="level-bar">
+            <div class="level-segment level-1" data-level="1">
+                <div class="level-label">安全</div>
+            </div>
+            <div class="level-segment level-2" data-level="2">
+                <div class="level-label">注意</div>
+            </div>
+            <div class="level-segment level-3" data-level="3">
+                <div class="level-label">警戒</div>
+            </div>
+            <div class="level-segment level-4" data-level="4">
+                <div class="level-label">危険</div>
+            </div>
+            <div class="level-segment level-5" data-level="5">
+                <div class="level-label">緊急</div>
+            </div>
+        </div>
+        <div class="current-level" id="current-level">レベル 1</div>
+    </div>
 
     <!-- 地震詳細モーダル -->
     <div class="modal-overlay" id="earthquake-modal-overlay">

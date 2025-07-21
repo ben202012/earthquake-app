@@ -107,17 +107,46 @@
                 <!-- 日本列島活動状況ダッシュボード -->
                 <div class="japan-status-dashboard" id="japan-dashboard">
                     <div class="dashboard-title">🗾 日本列島地震活動状況</div>
+                    
+                    <!-- リアルタイム時計とカウンター -->
+                    <div class="realtime-info">
+                        <div class="realtime-clock">
+                            <div class="clock-display" id="realtime-clock">--:--:--</div>
+                            <div class="clock-label">現在時刻</div>
+                        </div>
+                        <div class="uptime-counter">
+                            <div class="uptime-display" id="uptime-counter">00:00:00</div>
+                            <div class="uptime-label">監視時間</div>
+                        </div>
+                    </div>
+
+                    <!-- データメトリクス -->
+                    <div class="metrics-row">
+                        <div class="metric-item">
+                            <div class="metric-value pulse" id="api-response-time">0ms</div>
+                            <div class="metric-label">応答時間</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="last-update-time">未取得</div>
+                            <div class="metric-label">最終更新</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value counter-animation" id="data-packets">0</div>
+                            <div class="metric-label">受信データ</div>
+                        </div>
+                    </div>
+                    
                     <div class="status-grid">
                         <div class="status-item">
-                            <div class="status-value" id="today-count">0</div>
+                            <div class="status-value counter-animation" id="today-count">0</div>
                             <div class="status-label">今日の地震</div>
                         </div>
                         <div class="status-item">
-                            <div class="status-value" id="week-count">0</div>
+                            <div class="status-value counter-animation" id="week-count">0</div>
                             <div class="status-label">今週の地震</div>
                         </div>
                         <div class="status-item">
-                            <div class="status-value" id="max-intensity">-</div>
+                            <div class="status-value pulse" id="max-intensity">-</div>
                             <div class="status-label">最大震度</div>
                         </div>
                         <div class="status-item">
@@ -136,6 +165,22 @@
                                 <div class="radar-pulse"></div>
                                 <div class="connection-text">地震監視システム起動中...</div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ライブデータストリーム -->
+                <div class="live-data-stream" id="live-data-stream">
+                    <div class="section-title">
+                        📡 ライブデータストリーム
+                        <div class="stream-indicator">
+                            <div class="stream-dot"></div>
+                            <span class="stream-status">LIVE</span>
+                        </div>
+                    </div>
+                    <div class="stream-container">
+                        <div class="stream-scroll" id="live-stream-content">
+                            <!-- ライブストリームデータが流れる -->
                         </div>
                     </div>
                 </div>

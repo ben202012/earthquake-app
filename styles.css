@@ -208,6 +208,89 @@ body {
     padding: 1rem;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    position: relative;
+}
+
+/* リアルタイム情報セクション */
+.realtime-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.realtime-clock, .uptime-counter {
+    text-align: center;
+    flex: 1;
+}
+
+.clock-display, .uptime-display {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ffd700;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    animation: digital-glow 2s infinite alternate;
+}
+
+@keyframes digital-glow {
+    0% { text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    100% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.3); }
+}
+
+.clock-label, .uptime-label {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
+/* メトリクス行 */
+.metrics-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+}
+
+.metric-item {
+    flex: 1;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metric-value {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #4CAF50;
+    font-family: 'Courier New', monospace;
+}
+
+.metric-value.pulse {
+    animation: metric-pulse 1.5s infinite;
+}
+
+@keyframes metric-pulse {
+    0%, 100% { 
+        color: #4CAF50; 
+        transform: scale(1);
+    }
+    50% { 
+        color: #81C784; 
+        transform: scale(1.05);
+    }
+}
+
+.metric-label {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
 }
 
 .dashboard-title {
@@ -236,6 +319,17 @@ body {
     font-weight: bold;
     margin-bottom: 0.25rem;
     color: #ffd700;
+    transition: all 0.5s ease;
+}
+
+.status-value.counter-animation {
+    animation: counter-update 0.8s ease-in-out;
+}
+
+@keyframes counter-update {
+    0% { transform: scale(1); color: #ffd700; }
+    50% { transform: scale(1.2); color: #fff; text-shadow: 0 0 15px #ffd700; }
+    100% { transform: scale(1); color: #ffd700; }
 }
 
 .status-label {
@@ -299,6 +393,77 @@ body {
 @keyframes fade-pulse {
     0%, 100% { opacity: 0.8; }
     50% { opacity: 1; }
+}
+
+/* ライブデータストリーム */
+.live-data-stream {
+    margin: 1rem 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+.live-data-stream .section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stream-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stream-dot {
+    width: 8px;
+    height: 8px;
+    background: #ff4757;
+    border-radius: 50%;
+    animation: stream-blink 1s infinite;
+}
+
+@keyframes stream-blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.stream-status {
+    font-size: 0.8rem;
+    color: #ff4757;
+    font-weight: bold;
+}
+
+.stream-container {
+    height: 120px;
+    overflow: hidden;
+    position: relative;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.stream-scroll {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: #4CAF50;
+    padding: 0.5rem;
+    white-space: nowrap;
+    animation: stream-scroll 15s linear infinite;
+}
+
+@keyframes stream-scroll {
+    0% { transform: translateY(100%); }
+    100% { transform: translateY(-100%); }
+}
+
+.stream-data-line {
+    opacity: 0.8;
+    margin: 0.2rem 0;
+    text-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
 }
 
 /* アクティビティフィード */
