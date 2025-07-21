@@ -191,24 +191,26 @@ class EarthquakeAPI {
             return null;
         }
 
-        const earthquake = data[0].earthquake;
-        if (!earthquake) return null;
-        
-        const hypocenter = earthquake.hypocenter || {};
-        
-        return {
-            source: 'jma',
-            time: new Date(earthquake.time),
-            location: hypocenter.name || '不明',
-            latitude: hypocenter.latitude,
-            longitude: hypocenter.longitude,
-            depth: hypocenter.depth,
-            magnitude: hypocenter.magnitude,
-            maxIntensity: this.convertP2PIntensity(earthquake.maxScale) || '不明',
-            tsunami: earthquake.domesticTsunami !== 'None',
-            areas: data[0].points || [],
-            rawData: data[0]
-        };
+        return data.map(item => {
+            const earthquake = item.earthquake;
+            if (!earthquake) return null;
+            
+            const hypocenter = earthquake.hypocenter || {};
+            
+            return {
+                source: 'jma',
+                time: new Date(earthquake.time),
+                location: hypocenter.name || '不明',
+                latitude: hypocenter.latitude,
+                longitude: hypocenter.longitude,
+                depth: hypocenter.depth,
+                magnitude: hypocenter.magnitude,
+                maxIntensity: this.convertP2PIntensity(earthquake.maxScale) || '不明',
+                tsunami: earthquake.domesticTsunami !== 'None',
+                areas: item.points || [],
+                rawData: item
+            };
+        }).filter(item => item !== null);
     }
 
     getConnectionStatus() {

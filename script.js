@@ -232,15 +232,28 @@ class EarthquakeApp {
 
     handleEarthquakeData(data, source) {
         try {
-            this.addToHistory(data);
-            this.updateEarthquakeDisplay(data, source);
-            
-            if (this.map) {
-                this.map.displayEarthquake(data);
-            }
-            
-            if (this.notification) {
-                this.notification.notify(data);
+            if (source === 'jma' && Array.isArray(data)) {
+                data.forEach(item => this.addToHistory(item));
+                this.updateEarthquakeDisplay(data, source);
+                
+                if (this.map && data.length > 0) {
+                    this.map.displayEarthquake(data[0]);
+                }
+                
+                if (this.notification && data.length > 0) {
+                    this.notification.notify(data[0]);
+                }
+            } else {
+                this.addToHistory(data);
+                this.updateEarthquakeDisplay(data, source);
+                
+                if (this.map) {
+                    this.map.displayEarthquake(data);
+                }
+                
+                if (this.notification) {
+                    this.notification.notify(data);
+                }
             }
             
             console.log(`${source.toUpperCase()} earthquake data processed:`, data);
@@ -255,15 +268,31 @@ class EarthquakeApp {
         const targetElement = source === 'p2p' ? this.elements.p2pInfo : this.elements.jmaInfo;
         if (!targetElement) return;
 
-        const earthquakeCard = this.createEarthquakeCard(data);
-        
         targetElement.innerHTML = '';
-        targetElement.appendChild(earthquakeCard);
+        
+        if (source === 'jma' && Array.isArray(data)) {
+            const listContainer = document.createElement('div');
+            listContainer.className = 'earthquake-list';
+            
+            data.forEach((earthquakeData, index) => {
+                const earthquakeCard = this.createEarthquakeCard(earthquakeData, index === 0);
+                listContainer.appendChild(earthquakeCard);
+            });
+            
+            targetElement.appendChild(listContainer);
+        } else {
+            const earthquakeCard = this.createEarthquakeCard(data, true);
+            targetElement.appendChild(earthquakeCard);
+        }
     }
 
-    createEarthquakeCard(data) {
+    createEarthquakeCard(data, isLatest = true) {
         const card = document.createElement('div');
         card.className = 'earthquake-card';
+        
+        if (!isLatest) {
+            card.classList.add('historical');
+        }
         
         if (data.magnitude >= 6.0 || this.parseIntensity(data.maxIntensity) >= 5) {
             card.classList.add('urgent');
@@ -286,6 +315,7 @@ class EarthquakeApp {
             <div class="earthquake-header">
                 <span class="magnitude">${magnitude}</span>
                 <span class="timestamp">${time}</span>
+                ${isLatest ? '<span class="latest-badge">最新</span>' : ''}
             </div>
             <div class="location">${data.location}</div>
             <div class="intensity-info">

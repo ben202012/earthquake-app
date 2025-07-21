@@ -119,6 +119,32 @@ body {
     padding: 2rem;
 }
 
+/* 地震情報リスト */
+.earthquake-list {
+    max-height: 100%;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+/* カスタムスクロールバー */
+.earthquake-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.earthquake-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.earthquake-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.earthquake-list::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
 /* 地震情報カード */
 .earthquake-card {
     border: 1px solid #e9ecef;
@@ -126,6 +152,12 @@ body {
     padding: 1rem;
     margin-bottom: 1rem;
     background: #fff;
+    transition: all 0.3s ease;
+}
+
+.earthquake-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
 }
 
 .earthquake-card.urgent {
@@ -133,11 +165,32 @@ body {
     background: #fff5f5;
 }
 
+.earthquake-card.historical {
+    opacity: 0.85;
+    background: #fafafa;
+}
+
+.earthquake-card.historical:hover {
+    opacity: 1;
+    background: #fff;
+}
+
 .earthquake-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.latest-badge {
+    background: #2ed573;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 .magnitude {
