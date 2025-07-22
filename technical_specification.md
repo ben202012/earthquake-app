@@ -58,6 +58,7 @@ technical_specification.md # 技術仕様書
 - **右側パネル（40%）**: インタラクティブ地図（Leaflet.js）
 - **サイドバー**: 設定パネル（スライド式表示/非表示）
 - **モーダルウィンドウ**: 地震詳細情報表示（JMAカードクリック時）
+- **固定強震モニタパネル**: 右上固定配置のリアルタイム震度表示iframe
 
 ### 2.2 データ管理
 
@@ -421,11 +422,66 @@ dashboardStats: {
 - **詳細ログ**: アクション実行結果の時系列表示
 - **包括的テスト**: 接続、通知、音声、設定、地震シミュレート、モーダルの全機能テスト
 
+### 11.4 固定強震モニタパネル
+
+#### 11.4.1 パネル構造
+```html
+<div class="fixed-kmoni-panel" id="fixed-kmoni-panel">
+  <div class="kmoni-header"> <!-- ドラッグ可能ヘッダー -->
+    <div class="kmoni-title">📊 強震モニタ</div>
+    <div class="kmoni-controls">
+      <button id="kmoni-refresh">🔄</button>    <!-- 更新 -->
+      <button id="kmoni-minimize">➖</button>   <!-- 最小化 -->
+      <button id="kmoni-close">✕</button>      <!-- 閉じる -->
+    </div>
+  </div>
+  <div class="kmoni-content">
+    <iframe src="http://www.kmoni.bosai.go.jp"></iframe>
+  </div>
+  <div class="kmoni-status">URL表示</div>
+</div>
+```
+
+#### 11.4.2 パネル機能
+```javascript
+class FixedKmoniPanel {
+  constructor() {
+    this.isVisible = true;
+    this.isMinimized = false;
+    this.isDragging = false;
+  }
+  
+  // 主要メソッド
+  loadKmoni()      // 強震モニタiframe読み込み
+  refreshKmoni()   // パネル更新（回転アニメーション付き）
+  toggleMinimize() // 最小化/復元切り替え
+  startDrag(e)     // ドラッグ開始
+  drag(e)          // ドラッグ中（境界制御付き）
+  endDrag()        // ドラッグ終了
+}
+```
+
+#### 11.4.3 CSS仕様
+```css
+.fixed-kmoni-panel {
+  position: fixed;
+  top: 90px; right: 20px;
+  width: 400px; height: 300px;
+  z-index: 9999;
+  resize: both; /* リサイズ可能 */
+  min-width: 300px; max-width: 600px;
+  min-height: 200px; max-height: 500px;
+  backdrop-filter: blur(15px);
+  border-radius: 12px;
+}
+```
+
 ## 12. 今後の技術的拡張
 
 ### 12.1 実装済み機能
 - ✅ **緊急地震速報対応**: EEWステータス表示・監視
 - ✅ **モーダル詳細表示**: クリック時の詳細情報表示
+- ✅ **固定強震モニタパネル**: 右上固定・ドラッグ移動・リサイズ可能
 - ✅ **活動統計ダッシュボード**: リアルタイム統計表示
 - ✅ **10件履歴表示**: 表示件数の拡張
 - ✅ **視覚的UI強化**: Glassmorphism、アニメーション効果

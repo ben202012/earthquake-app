@@ -1102,3 +1102,198 @@ body {
         width: 100%;
     }
 }
+
+/* 右上固定 強震モニタパネル */
+.fixed-kmoni-panel {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    width: 400px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    z-index: 9999;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    resize: both;
+    min-width: 300px;
+    min-height: 200px;
+    max-width: 600px;
+    max-height: 500px;
+}
+
+.kmoni-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+}
+
+.kmoni-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.kmoni-icon {
+    font-size: 1rem;
+}
+
+.kmoni-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.kmoni-refresh-btn,
+.kmoni-minimize-btn,
+.kmoni-close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kmoni-refresh-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(180deg);
+}
+
+.kmoni-minimize-btn:hover {
+    background: rgba(255, 193, 7, 0.3);
+}
+
+.kmoni-close-btn:hover {
+    background: rgba(220, 38, 127, 0.3);
+}
+
+.kmoni-content {
+    position: relative;
+    height: calc(100% - 80px);
+    background: #f8fafc;
+}
+
+.kmoni-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.loading-text {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+#kmoni-iframe {
+    border: none;
+    background: white;
+    display: none;
+}
+
+.kmoni-status {
+    background: #e2e8f0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.7rem;
+    color: #475569;
+    border-top: 1px solid #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 最小化状態 */
+.fixed-kmoni-panel.minimized {
+    height: 40px;
+    resize: none;
+}
+
+.fixed-kmoni-panel.minimized .kmoni-content,
+.fixed-kmoni-panel.minimized .kmoni-status {
+    display: none;
+}
+
+.fixed-kmoni-panel.minimized .kmoni-minimize-btn {
+    content: '⬜';
+}
+
+/* 非表示状態 */
+.fixed-kmoni-panel.hidden {
+    display: none;
+}
+
+/* ドラッグ可能 */
+.fixed-kmoni-panel.dragging {
+    transition: none;
+    cursor: move;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .fixed-kmoni-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+        height: 250px;
+        resize: vertical;
+    }
+}
+
+@media (max-width: 480px) {
+    .fixed-kmoni-panel {
+        top: 70px;
+        width: calc(100% - 20px);
+        right: 10px;
+        left: 10px;
+        height: 200px;
+    }
+    
+    .kmoni-header {
+        padding: 0.5rem;
+    }
+    
+    .kmoni-title {
+        font-size: 0.8rem;
+    }
+    
+    .kmoni-controls {
+        gap: 0.1rem;
+    }
+}

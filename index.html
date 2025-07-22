@@ -133,6 +133,7 @@
                         <!-- 動的に追加される -->
                     </div>
                 </div>
+
             </section>
 
             <section class="jma-panel" id="jma-panel">
@@ -147,6 +148,38 @@
             <div id="earthquake-map"></div>
         </div>
     </main>
+
+    <!-- 右上固定 強震モニタ表示エリア -->
+    <div class="fixed-kmoni-panel" id="fixed-kmoni-panel">
+        <div class="kmoni-header">
+            <div class="kmoni-title">
+                <span class="kmoni-icon">📊</span>
+                <span class="kmoni-name">強震モニタ</span>
+            </div>
+            <div class="kmoni-controls">
+                <button class="kmoni-refresh-btn" id="kmoni-refresh" title="更新">🔄</button>
+                <button class="kmoni-minimize-btn" id="kmoni-minimize" title="最小化">➖</button>
+                <button class="kmoni-close-btn" id="kmoni-close" title="閉じる">✕</button>
+            </div>
+        </div>
+        <div class="kmoni-content" id="kmoni-content">
+            <div class="kmoni-loading" id="kmoni-loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">強震モニタ読み込み中...</div>
+            </div>
+            <iframe id="kmoni-iframe" 
+                    src="http://www.kmoni.bosai.go.jp"
+                    width="100%" 
+                    height="100%"
+                    frameborder="0"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    loading="lazy">
+            </iframe>
+        </div>
+        <div class="kmoni-status" id="kmoni-status">
+            <span class="status-text">http://www.kmoni.bosai.go.jp</span>
+        </div>
+    </div>
 
     <aside class="settings-sidebar" id="settings-sidebar">
         <div class="settings-content">

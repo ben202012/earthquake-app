@@ -1123,3 +1123,253 @@ window.addEventListener('beforeunload', () => {
         app.cleanup();
     }
 });
+
+// 固定強震モニタパネル管理クラス
+class FixedKmoniPanel {
+    constructor() {
+        this.isVisible = true;
+        this.isMinimized = false;
+        this.isDragging = false;
+        this.dragOffset = { x: 0, y: 0 };
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.loadKmoni();
+    }
+
+    setupEventListeners() {
+        const panel = document.getElementById('fixed-kmoni-panel');
+        const header = document.querySelector('.kmoni-header');
+        const refreshBtn = document.getElementById('kmoni-refresh');
+        const minimizeBtn = document.getElementById('kmoni-minimize');
+        const closeBtn = document.getElementById('kmoni-close');
+        const iframe = document.getElementById('kmoni-iframe');
+
+        // ドラッグ機能
+        if (header && panel) {
+            header.addEventListener('mousedown', (e) => this.startDrag(e));
+            document.addEventListener('mousemove', (e) => this.drag(e));
+            document.addEventListener('mouseup', () => this.endDrag());
+        }
+
+        // 制御ボタン
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.refreshKmoni());
+        }
+
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('click', () => this.toggleMinimize());
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.close());
+        }
+
+        // iframe読み込み完了時
+        if (iframe) {
+            iframe.addEventListener('load', () => this.onIframeLoad());
+            iframe.addEventListener('error', () => this.onIframeError());
+        }
+
+        // リサイズ対応
+        window.addEventListener('resize', () => this.adjustPosition());
+    }
+
+    loadKmoni() {
+        const loading = document.getElementById('kmoni-loading');
+        const iframe = document.getElementById('kmoni-iframe');
+
+        if (loading && iframe) {
+            // 3秒後にローディングを隠してiframeを表示
+            setTimeout(() => {
+                loading.style.opacity = '0';
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    iframe.style.display = 'block';
+                    
+                    // アクティビティフィードに追加
+                    if (window.earthquakeApp) {
+                        window.earthquakeApp.addActivityFeedItem(
+                            '📊 強震モニタパネルを表示',
+                            'info'
+                        );
+                    }
+                }, 300);
+            }, 3000);
+        }
+    }
+
+    refreshKmoni() {
+        const iframe = document.getElementById('kmoni-iframe');
+        const loading = document.getElementById('kmoni-loading');
+        const refreshBtn = document.getElementById('kmoni-refresh');
+
+        if (iframe && loading && refreshBtn) {
+            // リフレッシュアニメーション
+            refreshBtn.style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                refreshBtn.style.transform = 'rotate(0deg)';
+            }, 500);
+
+            // iframeを再読み込み
+            loading.style.display = 'flex';
+            loading.style.opacity = '1';
+            iframe.style.display = 'none';
+
+            // 少し遅延してからsrcを再設定
+            setTimeout(() => {
+                iframe.src = 'http://www.kmoni.bosai.go.jp';
+                this.loadKmoni();
+            }, 500);
+
+            // アクティビティフィードに追加
+            if (window.earthquakeApp) {
+                window.earthquakeApp.addActivityFeedItem(
+                    '🔄 強震モニタを更新',
+                    'info'
+                );
+            }
+        }
+    }
+
+    toggleMinimize() {
+        const panel = document.getElementById('fixed-kmoni-panel');
+        const minimizeBtn = document.getElementById('kmoni-minimize');
+
+        if (panel && minimizeBtn) {
+            this.isMinimized = !this.isMinimized;
+
+            if (this.isMinimized) {
+                panel.classList.add('minimized');
+                minimizeBtn.textContent = '⬜';
+                minimizeBtn.title = '元のサイズに戻す';
+            } else {
+                panel.classList.remove('minimized');
+                minimizeBtn.textContent = '➖';
+                minimizeBtn.title = '最小化';
+            }
+        }
+    }
+
+    close() {
+        const panel = document.getElementById('fixed-kmoni-panel');
+
+        if (panel) {
+            panel.classList.add('hidden');
+            this.isVisible = false;
+
+            // アクティビティフィードに追加
+            if (window.earthquakeApp) {
+                window.earthquakeApp.addActivityFeedItem(
+                    '❌ 強震モニタパネルを閉じました',
+                    'info'
+                );
+            }
+        }
+    }
+
+    show() {
+        const panel = document.getElementById('fixed-kmoni-panel');
+
+        if (panel) {
+            panel.classList.remove('hidden');
+            this.isVisible = true;
+
+            // アクティビティフィードに追加
+            if (window.earthquakeApp) {
+                window.earthquakeApp.addActivityFeedItem(
+                    '📊 強震モニタパネルを表示',
+                    'info'
+                );
+            }
+        }
+    }
+
+    startDrag(e) {
+        const panel = document.getElementById('fixed-kmoni-panel');
+        
+        if (panel && !this.isMinimized) {
+            this.isDragging = true;
+            panel.classList.add('dragging');
+
+            const rect = panel.getBoundingClientRect();
+            this.dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+    }
+
+    drag(e) {
+        if (this.isDragging) {
+            const panel = document.getElementById('fixed-kmoni-panel');
+            
+            if (panel) {
+                const x = e.clientX - this.dragOffset.x;
+                const y = e.clientY - this.dragOffset.y;
+
+                // 画面境界チェック
+                const maxX = window.innerWidth - panel.offsetWidth;
+                const maxY = window.innerHeight - panel.offsetHeight;
+
+                panel.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+                panel.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+                panel.style.right = 'auto';
+            }
+        }
+    }
+
+    endDrag() {
+        const panel = document.getElementById('fixed-kmoni-panel');
+        
+        if (this.isDragging && panel) {
+            this.isDragging = false;
+            panel.classList.remove('dragging');
+        }
+    }
+
+    adjustPosition() {
+        const panel = document.getElementById('fixed-kmoni-panel');
+        
+        if (panel) {
+            const rect = panel.getBoundingClientRect();
+            const maxX = window.innerWidth - panel.offsetWidth;
+            const maxY = window.innerHeight - panel.offsetHeight;
+
+            if (rect.right > window.innerWidth) {
+                panel.style.left = maxX + 'px';
+                panel.style.right = 'auto';
+            }
+            if (rect.bottom > window.innerHeight) {
+                panel.style.top = maxY + 'px';
+            }
+        }
+    }
+
+    onIframeLoad() {
+        console.log('強震モニタの読み込み完了');
+    }
+
+    onIframeError() {
+        console.error('強震モニタの読み込み失敗');
+        
+        const errorElement = document.getElementById('error-message');
+        if (errorElement) {
+            errorElement.textContent = '強震モニタの読み込みに失敗しました';
+            errorElement.classList.add('show');
+            setTimeout(() => {
+                errorElement.classList.remove('show');
+            }, 5000);
+        }
+    }
+}
+
+// 固定強震モニタパネルの初期化
+document.addEventListener('DOMContentLoaded', () => {
+    // アプリ初期化後に強震モニタパネルを初期化
+    setTimeout(() => {
+        window.fixedKmoniPanel = new FixedKmoniPanel();
+    }, 1000);
+});
