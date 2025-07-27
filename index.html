@@ -300,22 +300,24 @@
         
         .map-overlay {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(15, 20, 25, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            bottom: 20px;
+            right: 20px;
+            background: rgba(45, 55, 72, 0.92);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(74, 158, 255, 0.2);
             border-radius: 12px;
             padding: 16px;
             min-width: 280px;
             z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         
         .overlay-title {
             font-size: 16px;
             font-weight: 600;
-            color: #4a9eff;
+            color: #74b9ff;
             margin-bottom: 12px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         
         .coordinate-info {
@@ -330,15 +332,16 @@
         
         .coord-label {
             font-size: 12px;
-            color: #94a3b8;
+            color: #a0aec0;
             margin-bottom: 4px;
         }
         
         .coord-value {
             font-size: 14px;
             font-weight: 600;
-            color: #ffffff;
+            color: #f7fafc;
             font-family: 'SF Mono', monospace;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
         
         /* === 右パネル === */
@@ -489,6 +492,14 @@
             font-family: 'SF Mono', monospace;
         }
         
+        /* 震源位置情報パネル */
+        .earthquake-info-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
         /* === カスタムスクロールバー === */
         ::-webkit-scrollbar {
             width: 6px;
@@ -533,6 +544,282 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* === 震度情報ポップアップ === */
+        .intensity-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 42, 56, 0.98);
+            border: 2px solid rgba(74, 158, 255, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            max-height: 600px;
+            overflow-y: auto;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            animation: popupSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes popupSlideIn {
+            from { 
+                opacity: 0; 
+                transform: translate(-50%, -60%) scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1); 
+            }
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+        }
+        
+        .popup-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #74b9ff;
+            margin: 0;
+        }
+        
+        .popup-close {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.4);
+            color: #ff6b6b;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .popup-close:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .earthquake-summary {
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-bottom: 4px;
+        }
+        
+        .summary-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f7fafc;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .intensity-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        .intensity-section {
+            margin-bottom: 16px;
+        }
+        
+        .intensity-header {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .intensity-regions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 6px;
+            margin-left: 12px;
+        }
+        
+        .region-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        
+        .region-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(2px);
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            animation: fadeInOverlay 0.3s ease-out;
+        }
+        
+        @keyframes fadeInOverlay {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* === 設定パネル === */
+        .settings-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 42, 56, 0.98);
+            border: 2px solid rgba(74, 158, 255, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 700px;
+            overflow-y: auto;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            animation: popupSlideIn 0.3s ease-out;
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+        }
+        
+        .settings-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #74b9ff;
+            margin: 0;
+        }
+        
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        
+        .settings-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a9eff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .settings-section-title:hover {
+            color: #74b9ff;
+            transform: translateX(2px);
+        }
+        
+        .activity-feed-settings {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .map-layers-settings {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .layer-option {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .layer-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(2px);
+        }
+        
+        .layer-option.active {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            border-color: rgba(74, 158, 255, 0.5);
+            color: white;
+        }
+        
+        .layer-option-name {
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 160px;
+            flex: 1;
+        }
+        
+        .layer-option-status {
+            font-size: 12px;
+            color: #74b9ff;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        .layer-option.active .layer-option-status {
+            color: white;
         }
         
         .slide-in-left {
@@ -607,8 +894,6 @@
         }
         
         .leaflet-control-layers-list {
-            display: block !important;
-            visibility: visible !important;
             color: white !important;
             padding: 8px 0 !important;
         }
@@ -670,6 +955,11 @@
         .earthquake-marker {
             border: 2px solid rgba(255, 255, 255, 0.8) !important;
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        /* ナイトモードレイヤーのスタイル */
+        .night-mode-layer {
+            filter: brightness(0.7) contrast(1.2) saturate(0.8);
         }
         
         /* レイヤーコントロールのスタイル改善 */
@@ -774,29 +1064,6 @@
         <main class="main-content">
             <div class="map-container">
                 <div id="earthquake-map"></div>
-                
-                <!-- 地図オーバーレイ情報 -->
-                <div class="map-overlay">
-                    <div class="overlay-title">📍 震源位置情報</div>
-                    <div class="coordinate-info">
-                        <div class="coord-item">
-                            <div class="coord-label">北緯</div>
-                            <div class="coord-value" id="latitude">---.---°</div>
-                        </div>
-                        <div class="coord-item">
-                            <div class="coord-label">東経</div>
-                            <div class="coord-value" id="longitude">---.---°</div>
-                        </div>
-                        <div class="coord-item">
-                            <div class="coord-label">深さ</div>
-                            <div class="coord-value" id="depth">-- km</div>
-                        </div>
-                        <div class="coord-item">
-                            <div class="coord-label">マグニチュード</div>
-                            <div class="coord-value" id="magnitude">M-.-</div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </main>
         
@@ -842,15 +1109,26 @@
                     </div>
                 </div>
                 
-                <!-- アクティビティフィード -->
+                <!-- 震源位置情報 -->
                 <div class="monitoring-section">
-                    <div class="monitoring-title">アクティビティフィード</div>
-                    <div class="activity-feed" id="activity-feed">
-                        <div class="feed-item">
-                            <div class="feed-icon">🟢</div>
-                            <div class="feed-content">
-                                <div class="feed-text">システムが開始されました</div>
-                                <div class="feed-time" id="system-start-time">--:--:--</div>
+                    <div class="monitoring-title">📍 震源位置情報</div>
+                    <div class="earthquake-info-panel">
+                        <div class="coordinate-info">
+                            <div class="coord-item">
+                                <div class="coord-label">北緯</div>
+                                <div class="coord-value" id="latitude">---.---°</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">東経</div>
+                                <div class="coord-value" id="longitude">---.---°</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">深さ</div>
+                                <div class="coord-value" id="depth">-- km</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">マグニチュード</div>
+                                <div class="coord-value" id="magnitude">M-.-</div>
                             </div>
                         </div>
                     </div>
@@ -883,21 +1161,81 @@
             async init() {
                 console.log('🌏 Professional Earthquake Monitor v2.0 - Starting...');
                 
-                // 基本システム初期化
-                this.setupClock();
-                this.setupMap();
-                this.connectWebSocket();
-                this.loadHistoricalData();
-                this.startPerformanceMonitoring();
-                
-                // 接続状態を表示
-                this.updateConnectionStatus('p2p-status', true);
-                this.updateConnectionStatus('api-status', true);
-                
-                // システム開始をログ
-                this.addActivityFeedItem('🟢', 'システムが正常に開始されました', new Date());
-                
-                console.log('✅ Professional Earthquake Monitor initialized successfully');
+                try {
+                    // DOM要素の存在確認
+                    const requiredElements = [
+                        'current-time', 'system-clock', 'system-date', 'uptime',
+                        'latitude', 'longitude', 'depth', 'magnitude'
+                    ];
+                    
+                    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+                    if (missingElements.length > 0) {
+                        console.warn(`⚠️ Missing DOM elements: ${missingElements.join(', ')}`);
+                    }
+                    
+                    // 基本システム初期化（並列実行で高速化）
+                    await Promise.all([
+                        this.setupClockAsync(),
+                        this.setupMapAsync(),
+                        this.startPerformanceMonitoringAsync()
+                    ]);
+                    
+                    // 接続状態を表示
+                    this.updateConnectionStatus('p2p-status', false);
+                    this.updateConnectionStatus('api-status', false);
+                    
+                    // システム開始をログ
+                    this.addActivityFeedItem('🟢', 'システムが高速モードで開始されました', new Date());
+                    
+                    // 非同期でデータ読み込みとWebSocket接続
+                    Promise.all([
+                        this.loadHistoricalData(),
+                        this.connectWebSocketAsync()
+                    ]).then(() => {
+                        console.log('✅ All background tasks completed');
+                        this.updateConnectionStatus('api-status', true);
+                    }).catch(error => {
+                        console.warn('⚠️ Some background tasks failed:', error);
+                        this.updateConnectionStatus('api-status', false);
+                    });
+                    
+                    console.log('✅ Professional Earthquake Monitor initialized successfully');
+                } catch (error) {
+                    console.error('❌ Failed to initialize system:', error);
+                    this.addActivityFeedItem('❌', `初期化エラー: ${error.message}`, new Date());
+                }
+            }
+            
+            async setupClockAsync() {
+                return new Promise(resolve => {
+                    this.setupClock();
+                    resolve();
+                });
+            }
+            
+            async setupMapAsync() {
+                return new Promise(resolve => {
+                    this.setupMap();
+                    resolve();
+                });
+            }
+            
+            async startPerformanceMonitoringAsync() {
+                return new Promise(resolve => {
+                    this.startPerformanceMonitoring();
+                    resolve();
+                });
+            }
+            
+            async connectWebSocketAsync() {
+                return new Promise((resolve, reject) => {
+                    try {
+                        this.connectWebSocket();
+                        setTimeout(resolve, 1000); // 1秒で接続確立と仮定
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
             }
 
             setupClock() {
@@ -905,42 +1243,65 @@
                     const now = new Date();
                     
                     // ヘッダー時計
-                    document.getElementById('current-time').textContent = 
-                        now.toLocaleTimeString('ja-JP', { hour12: false });
+                    const currentTimeEl = document.getElementById('current-time');
+                    if (currentTimeEl) {
+                        currentTimeEl.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
+                    }
                     
                     // システム時計
-                    document.getElementById('system-clock').textContent = 
-                        now.toLocaleTimeString('ja-JP', { hour12: false });
-                    document.getElementById('system-date').textContent = 
-                        now.toLocaleDateString('ja-JP');
+                    const systemClockEl = document.getElementById('system-clock');
+                    if (systemClockEl) {
+                        systemClockEl.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
+                    }
+                    
+                    const systemDateEl = document.getElementById('system-date');
+                    if (systemDateEl) {
+                        systemDateEl.textContent = now.toLocaleDateString('ja-JP');
+                    }
                     
                     // 稼働時間
-                    const uptime = new Date(now - this.startTime);
-                    const hours = String(Math.floor(uptime / 3600000)).padStart(2, '0');
-                    const minutes = String(Math.floor((uptime % 3600000) / 60000)).padStart(2, '0');
-                    const seconds = String(Math.floor((uptime % 60000) / 1000)).padStart(2, '0');
-                    document.getElementById('uptime').textContent = `${hours}:${minutes}:${seconds}`;
+                    const uptimeEl = document.getElementById('uptime');
+                    if (uptimeEl) {
+                        const uptime = new Date(now - this.startTime);
+                        const hours = String(Math.floor(uptime / 3600000)).padStart(2, '0');
+                        const minutes = String(Math.floor((uptime % 3600000) / 60000)).padStart(2, '0');
+                        const seconds = String(Math.floor((uptime % 60000) / 1000)).padStart(2, '0');
+                        uptimeEl.textContent = `${hours}:${minutes}:${seconds}`;
+                    }
                 };
                 
                 updateClock();
                 setInterval(updateClock, 1000);
                 
                 // システム開始時刻を記録
-                document.getElementById('system-start-time').textContent = 
-                    this.startTime.toLocaleTimeString('ja-JP');
+                const systemStartTimeEl = document.getElementById('system-start-time');
+                if (systemStartTimeEl) {
+                    systemStartTimeEl.textContent = this.startTime.toLocaleTimeString('ja-JP');
+                }
             }
 
             setupMap() {
                 this.map = L.map('earthquake-map', {
-                    center: [36.0, 138.0],
-                    zoom: 6,
+                    center: [36.2, 138.2],
+                    zoom: 5,
                     zoomControl: true,
                     attributionControl: false
                 });
 
-                // 複数の地図レイヤーを定義
+                // 複数の地図レイヤーを定義（明度調整済み）
                 const mapLayers = {
-                    'ダーク（高視認性）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                    'ダーク（明るめ）': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CARTO',
+                        maxZoom: 18,
+                        minZoom: 4
+                    }),
+                    'グレー（中間調）': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CARTO',
+                        maxZoom: 18,
+                        minZoom: 4,
+                        opacity: 0.8
+                    }),
+                    'ダーク（標準）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
                         maxZoom: 18,
                         minZoom: 4
@@ -950,59 +1311,34 @@
                         maxZoom: 18,
                         minZoom: 4
                     }),
-                    'グレースケール': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-                        attribution: '© CARTO',
+                    'ナイトモード': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CARTO (Night Mode)',
                         maxZoom: 18,
-                        minZoom: 4
-                    }),
-                    'ナイトモード': L.tileLayer('https://map1.vis.earthdata.nasa.gov/wmts-webmerc/VIIRS_CityLights_2012/default/{time}/{tilematrixset}{max_zoom}/{z}/{y}/{x}.jpg', {
-                        attribution: 'NASA',
-                        maxZoom: 8,
-                        minZoom: 1,
-                        time: '2016-01-01',
-                        tilematrixset: 'GoogleMapsCompatible_Level'
+                        minZoom: 4,
+                        className: 'night-mode-layer'
                     })
                 };
 
-                // デフォルトレイヤー（高視認性ダーク）を設定
-                const defaultLayer = mapLayers['ダーク（高視認性）'];
+                // デフォルトレイヤー（明るめダーク）を設定
+                const defaultLayer = mapLayers['ダーク（明るめ）'];
                 defaultLayer.addTo(this.map);
 
-                // レイヤーコントロールを追加（常に展開表示）
-                const layerControl = L.control.layers(mapLayers, null, {
-                    position: 'topright',
-                    collapsed: false
-                }).addTo(this.map);
-                
-                // コントロールの可視性を確実に維持
-                setTimeout(() => {
-                    const controlElement = document.querySelector('.leaflet-control-layers');
-                    const toggleElement = document.querySelector('.leaflet-control-layers-toggle');
-                    
-                    if (controlElement) {
-                        controlElement.style.display = 'block !important';
-                        controlElement.style.visibility = 'visible !important';
-                        controlElement.style.opacity = '1 !important';
-                        controlElement.style.zIndex = '2000 !important';
-                        
-                        // レイヤーリストを常に表示
-                        const layersList = controlElement.querySelector('.leaflet-control-layers-list');
-                        if (layersList) {
-                            layersList.style.display = 'block !important';
-                        }
-                    }
-                    
-                    if (toggleElement) {
-                        toggleElement.style.display = 'block !important';
-                        toggleElement.style.visibility = 'visible !important';
-                        toggleElement.style.opacity = '1 !important';
-                    }
-                }, 100);
+                // 地図レイヤーを保存（設定パネルで使用）
+                this.mapLayers = mapLayers;
+                this.currentLayer = defaultLayer;
+                this.currentLayerName = 'ダーク（明るめ）';
                 
                 // イベントリスナーでレイヤー変更を監視
                 this.map.on('baselayerchange', (e) => {
-                    console.log(`🗺️ Map layer changed to: ${e.name}`);
+                    this.currentLayerName = e.name;
+                    console.log(`🗺️ Map layer changed to: "${e.name}"`);
                     this.addActivityFeedItem('🗺️', `地図レイヤーを${e.name}に変更しました`, new Date());
+                    
+                    // 設定パネルが開いている場合はUIを更新
+                    const layersContainer = document.getElementById('settings-map-layers');
+                    if (layersContainer && layersContainer.style.display !== 'none') {
+                        this.updateMapLayerOptions();
+                    }
                 });
 
                 // カスタムスタイル（日本列島を強調）
@@ -1062,32 +1398,62 @@
 
             connectWebSocket() {
                 try {
+                    // 接続試行中状態を表示
+                    this.updateConnectionStatus('p2p-status', false);
+                    
                     this.websocket = new WebSocket('wss://api.p2pquake.net/v2/ws');
                     
+                    // 接続タイムアウト設定
+                    const connectionTimeout = setTimeout(() => {
+                        if (this.websocket.readyState === WebSocket.CONNECTING) {
+                            this.websocket.close();
+                            console.warn('⚠️ WebSocket connection timeout');
+                            this.addActivityFeedItem('⚠️', 'P2P接続がタイムアウトしました', new Date());
+                        }
+                    }, 10000); // 10秒でタイムアウト
+                    
                     this.websocket.onopen = () => {
+                        clearTimeout(connectionTimeout);
                         console.log('🔌 WebSocket connected');
                         this.updateConnectionStatus('p2p-status', true);
                         this.addActivityFeedItem('🟢', 'P2P地震情報に接続しました', new Date());
                     };
 
                     this.websocket.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        this.handleEarthquakeData(data);
-                        this.stats.dataPackets++;
-                        this.updateStats();
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.handleEarthquakeData(data);
+                            this.stats.dataPackets++;
+                            this.updateStats();
+                        } catch (parseError) {
+                            console.warn('⚠️ Failed to parse WebSocket message:', parseError);
+                        }
+                    };
+
+                    this.websocket.onerror = (error) => {
+                        clearTimeout(connectionTimeout);
+                        console.error('❌ WebSocket error:', error);
+                        this.updateConnectionStatus('p2p-status', false);
                     };
 
                     this.websocket.onclose = () => {
+                        clearTimeout(connectionTimeout);
                         console.log('🔌 WebSocket disconnected');
                         this.updateConnectionStatus('p2p-status', false);
                         this.addActivityFeedItem('🔴', 'P2P接続が切断されました', new Date());
                         
-                        // 再接続試行
-                        setTimeout(() => this.connectWebSocket(), 5000);
+                        // 指数バックオフで再接続試行
+                        const retryDelay = Math.min(5000 * Math.pow(2, this.reconnectAttempts || 0), 30000);
+                        this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+                        
+                        setTimeout(() => {
+                            this.connectWebSocket();
+                        }, retryDelay);
                     };
                 } catch (error) {
                     console.error('❌ WebSocket connection failed:', error);
                     this.updateConnectionStatus('p2p-status', false);
+                    this.addActivityFeedItem('❌', `WebSocket接続エラー: ${error.message}`, new Date());
                 }
             }
 
@@ -1209,14 +1575,25 @@
             }
 
             updateOverlayInfo(earthquake) {
-                document.getElementById('latitude').textContent = 
-                    earthquake.latitude ? `${earthquake.latitude.toFixed(3)}°` : '---.---°';
-                document.getElementById('longitude').textContent = 
-                    earthquake.longitude ? `${earthquake.longitude.toFixed(3)}°` : '---.---°';
-                document.getElementById('depth').textContent = 
-                    earthquake.depth ? `${earthquake.depth} km` : '-- km';
-                document.getElementById('magnitude').textContent = 
-                    earthquake.magnitude ? `M${earthquake.magnitude.toFixed(1)}` : 'M-.-';
+                const latitudeEl = document.getElementById('latitude');
+                if (latitudeEl) {
+                    latitudeEl.textContent = earthquake.latitude ? `${earthquake.latitude.toFixed(3)}°` : '---.---°';
+                }
+                
+                const longitudeEl = document.getElementById('longitude');
+                if (longitudeEl) {
+                    longitudeEl.textContent = earthquake.longitude ? `${earthquake.longitude.toFixed(3)}°` : '---.---°';
+                }
+                
+                const depthEl = document.getElementById('depth');
+                if (depthEl) {
+                    depthEl.textContent = earthquake.depth ? `${earthquake.depth} km` : '-- km';
+                }
+                
+                const magnitudeEl = document.getElementById('magnitude');
+                if (magnitudeEl) {
+                    magnitudeEl.textContent = earthquake.magnitude ? `M${earthquake.magnitude.toFixed(1)}` : 'M-.-';
+                }
             }
 
             updateStatistics(earthquake) {
@@ -1254,11 +1631,30 @@
             }
 
             updateStats() {
-                document.getElementById('today-count').textContent = this.stats.todayCount;
-                document.getElementById('week-count').textContent = this.stats.weekCount;
-                document.getElementById('max-intensity').textContent = this.stats.maxIntensity;
-                document.getElementById('data-packets').textContent = this.stats.dataPackets;
-                document.getElementById('response-time').textContent = `${this.stats.responseTime}ms`;
+                const todayCountEl = document.getElementById('today-count');
+                if (todayCountEl) {
+                    todayCountEl.textContent = this.stats.todayCount;
+                }
+                
+                const weekCountEl = document.getElementById('week-count');
+                if (weekCountEl) {
+                    weekCountEl.textContent = this.stats.weekCount;
+                }
+                
+                const maxIntensityEl = document.getElementById('max-intensity');
+                if (maxIntensityEl) {
+                    maxIntensityEl.textContent = this.stats.maxIntensity;
+                }
+                
+                const dataPacketsEl = document.getElementById('data-packets');
+                if (dataPacketsEl) {
+                    dataPacketsEl.textContent = this.stats.dataPackets;
+                }
+                
+                const responseTimeEl = document.getElementById('response-time');
+                if (responseTimeEl) {
+                    responseTimeEl.textContent = `${this.stats.responseTime}ms`;
+                }
             }
 
             updateConnectionStatus(elementId, isConnected) {
@@ -1269,34 +1665,87 @@
             }
 
             addActivityFeedItem(icon, text, time) {
-                const feed = document.getElementById('activity-feed');
-                const item = document.createElement('div');
-                item.className = 'feed-item slide-in-left';
-                item.innerHTML = `
-                    <div class="feed-icon">${icon}</div>
-                    <div class="feed-content">
-                        <div class="feed-text">${text}</div>
-                        <div class="feed-time">${time.toLocaleTimeString('ja-JP')}</div>
-                    </div>
-                `;
-                
-                feed.insertBefore(item, feed.firstChild);
-                
-                // 最大10件に制限
-                while (feed.children.length > 10) {
-                    feed.removeChild(feed.lastChild);
+                // メモリ内のアクティビティログを管理
+                if (!this.activityLog) {
+                    this.activityLog = [];
                 }
+                
+                const logEntry = {
+                    icon: icon,
+                    text: text,
+                    time: time
+                };
+                
+                this.activityLog.unshift(logEntry);
+                
+                // 最大20件に制限
+                if (this.activityLog.length > 20) {
+                    this.activityLog = this.activityLog.slice(0, 20);
+                }
+                
+                // 設定パネルが開いている場合、そこのアクティビティフィードを更新
+                const settingsFeed = document.getElementById('settings-activity-feed');
+                if (settingsFeed) {
+                    this.updateActivityFeedDisplay(settingsFeed);
+                }
+            }
+            
+            updateActivityFeedDisplay(container) {
+                if (!this.activityLog || this.activityLog.length === 0) {
+                    container.innerHTML = `
+                        <div class="feed-item">
+                            <div class="feed-icon">🟢</div>
+                            <div class="feed-content">
+                                <div class="feed-text">システムが開始されました</div>
+                                <div class="feed-time">${this.startTime.toLocaleTimeString('ja-JP')}</div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = this.activityLog.map(log => `
+                    <div class="feed-item">
+                        <div class="feed-icon">${log.icon}</div>
+                        <div class="feed-content">
+                            <div class="feed-text">${log.text}</div>
+                            <div class="feed-time">${log.time.toLocaleTimeString('ja-JP')}</div>
+                        </div>
+                    </div>
+                `).join('');
             }
 
             async loadHistoricalData() {
                 try {
                     console.log('📚 Loading historical earthquake data...');
-                    const response = await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=10');
+                    
+                    // タイムアウト付きでAPIリクエスト
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒でタイムアウト
+                    
+                    const response = await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=10', {
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
                     const data = await response.json();
                     
+                    // データを並列処理で高速化
                     this.earthquakeHistory = data.map(item => this.parseEarthquakeData(item));
-                    this.updateEarthquakeDisplay();
-                    this.updateMapMarkers();
+                    
+                    // UI更新を並列実行
+                    await Promise.all([
+                        this.updateEarthquakeDisplayAsync(),
+                        this.updateMapMarkersAsync()
+                    ]);
                     
                     if (this.earthquakeHistory.length > 0) {
                         this.updateOverlayInfo(this.earthquakeHistory[0]);
@@ -1304,25 +1753,445 @@
                     }
                     
                     this.addActivityFeedItem('📊', `過去の地震データ ${data.length}件を読み込みました`, new Date());
-                    console.log(`✅ Loaded ${data.length} historical earthquake records`);
+                    console.log(`✅ Loaded ${data.length} historical earthquake records in optimized mode`);
                 } catch (error) {
                     console.error('❌ Failed to load historical data:', error);
-                    this.addActivityFeedItem('⚠️', '履歴データの読み込みに失敗しました', new Date());
+                    
+                    // フォールバック: キャッシュまたはサンプルデータを使用
+                    this.loadFallbackData();
+                    
+                    if (error.name === 'AbortError') {
+                        this.addActivityFeedItem('⚠️', 'データ読み込みがタイムアウトしました（サンプルデータを表示）', new Date());
+                    } else {
+                        this.addActivityFeedItem('⚠️', `履歴データの読み込みに失敗: ${error.message}`, new Date());
+                    }
                 }
+            }
+            
+            async updateEarthquakeDisplayAsync() {
+                return new Promise(resolve => {
+                    requestAnimationFrame(() => {
+                        this.updateEarthquakeDisplay();
+                        resolve();
+                    });
+                });
+            }
+            
+            async updateMapMarkersAsync() {
+                return new Promise(resolve => {
+                    requestAnimationFrame(() => {
+                        this.updateMapMarkers();
+                        resolve();
+                    });
+                });
+            }
+            
+            loadFallbackData() {
+                // サンプル地震データ（接続失敗時のフォールバック）
+                this.earthquakeHistory = [
+                    {
+                        id: 'sample-1',
+                        time: new Date(),
+                        location: '接続エラー - サンプルデータ',
+                        magnitude: 0,
+                        depth: 0,
+                        latitude: 36.0,
+                        longitude: 138.0,
+                        maxIntensity: '-',
+                        points: []
+                    }
+                ];
+                
+                this.updateEarthquakeDisplay();
+                this.updateMapMarkers();
+                
+                console.log('🔄 Fallback data loaded');
             }
 
             startPerformanceMonitoring() {
                 setInterval(() => {
                     // メモリ使用量の監視
                     if (performance.memory) {
-                        const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
-                        document.getElementById('memory-usage').textContent = `${memoryMB}MB`;
+                        const memoryUsageEl = document.getElementById('memory-usage');
+                        if (memoryUsageEl) {
+                            const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                            memoryUsageEl.textContent = `${memoryMB}MB`;
+                        }
                     }
                     
                     // 活発地域数の更新
-                    const activeRegions = new Set(this.earthquakeHistory.map(eq => eq.location)).size;
-                    document.getElementById('active-regions').textContent = activeRegions;
+                    const activeRegionsEl = document.getElementById('active-regions');
+                    if (activeRegionsEl && this.earthquakeHistory) {
+                        const activeRegions = new Set(this.earthquakeHistory.map(eq => eq.location)).size;
+                        activeRegionsEl.textContent = activeRegions;
+                    }
                 }, 5000);
+            }
+
+            showIntensityPopup(earthquake) {
+                // 既存のポップアップがあれば削除
+                this.closeIntensityPopup();
+                
+                // オーバーレイ作成
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                overlay.id = 'intensity-popup-overlay';
+                overlay.onclick = () => this.closeIntensityPopup();
+                
+                // ポップアップ作成
+                const popup = document.createElement('div');
+                popup.className = 'intensity-popup';
+                popup.id = 'intensity-popup';
+                
+                // ヘッダー
+                const header = `
+                    <div class="popup-header">
+                        <h3 class="popup-title">🌏 地震詳細情報</h3>
+                        <button class="popup-close" onclick="window.monitor.closeIntensityPopup()">×</button>
+                    </div>
+                `;
+                
+                // 地震概要
+                const summary = `
+                    <div class="earthquake-summary">
+                        <div style="font-size: 16px; font-weight: 600; color: #f7fafc; margin-bottom: 8px;">
+                            ${earthquake.location}
+                        </div>
+                        <div style="font-size: 14px; color: #a0aec0; margin-bottom: 12px;">
+                            ${earthquake.time.toLocaleString('ja-JP')}
+                        </div>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">マグニチュード</div>
+                                <div class="summary-value">M${earthquake.magnitude.toFixed(1)}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">最大震度</div>
+                                <div class="summary-value">震度${earthquake.maxIntensity}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">深さ</div>
+                                <div class="summary-value">${earthquake.depth}km</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">座標</div>
+                                <div class="summary-value">${earthquake.latitude.toFixed(2)}°, ${earthquake.longitude.toFixed(2)}°</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 震度情報
+                let intensityContent = '';
+                if (earthquake.points && earthquake.points.length > 0) {
+                    // 震度別にグループ化
+                    const intensityGroups = {};
+                    earthquake.points.forEach(point => {
+                        const intensity = this.parseIntensity(point.scale);
+                        if (!intensityGroups[intensity]) {
+                            intensityGroups[intensity] = [];
+                        }
+                        intensityGroups[intensity].push(point.addr);
+                    });
+                    
+                    // 震度の降順でソート
+                    const sortedIntensities = Object.keys(intensityGroups).sort((a, b) => {
+                        return this.getNumericIntensity(b) - this.getNumericIntensity(a);
+                    });
+                    
+                    intensityContent = `
+                        <div style="font-size: 16px; font-weight: 600; color: #74b9ff; margin-bottom: 12px;">
+                            📍 各地の震度情報
+                        </div>
+                        <div class="intensity-list">
+                    `;
+                    
+                    sortedIntensities.forEach(intensity => {
+                        const regions = intensityGroups[intensity];
+                        const intensityColor = this.getIntensityColor(intensity);
+                        
+                        intensityContent += `
+                            <div class="intensity-section">
+                                <div class="intensity-header" style="background: ${intensityColor};">
+                                    <span>震度${intensity}</span>
+                                    <span>${regions.length}地域</span>
+                                </div>
+                                <div class="intensity-regions">
+                        `;
+                        
+                        regions.forEach(region => {
+                            intensityContent += `<div class="region-item">${region}</div>`;
+                        });
+                        
+                        intensityContent += `
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    intensityContent += '</div>';
+                } else {
+                    intensityContent = `
+                        <div style="font-size: 16px; font-weight: 600; color: #74b9ff; margin-bottom: 12px;">
+                            📍 震度情報
+                        </div>
+                        <div style="color: #a0aec0; text-align: center; padding: 20px;">
+                            詳細な震度情報は利用できません
+                        </div>
+                    `;
+                }
+                
+                popup.innerHTML = header + summary + intensityContent;
+                
+                // DOM に追加
+                document.body.appendChild(overlay);
+                document.body.appendChild(popup);
+                
+                // アクティビティログに記録
+                this.addActivityFeedItem('📋', `${earthquake.location}の詳細情報を表示`, new Date());
+            }
+            
+            closeIntensityPopup() {
+                const overlay = document.getElementById('intensity-popup-overlay');
+                const popup = document.getElementById('intensity-popup');
+                
+                if (overlay) overlay.remove();
+                if (popup) popup.remove();
+            }
+            
+            getIntensityColor(intensity) {
+                const colorMap = {
+                    '7': 'linear-gradient(135deg, #8B0000 0%, #B22222 100%)',
+                    '6強': 'linear-gradient(135deg, #DC143C 0%, #FF1493 100%)',
+                    '6弱': 'linear-gradient(135deg, #FF4500 0%, #FF6347 100%)',
+                    '5強': 'linear-gradient(135deg, #FF8C00 0%, #FFA500 100%)',
+                    '5弱': 'linear-gradient(135deg, #FFD700 0%, #FFFF00 100%)',
+                    '4': 'linear-gradient(135deg, #32CD32 0%, #7CFC00 100%)',
+                    '3': 'linear-gradient(135deg, #00CED1 0%, #00FFFF 100%)',
+                    '2': 'linear-gradient(135deg, #4169E1 0%, #6495ED 100%)',
+                    '1': 'linear-gradient(135deg, #9370DB 0%, #BA55D3 100%)'
+                };
+                return colorMap[intensity] || 'linear-gradient(135deg, #4a9eff 0%, #667eea 100%)';
+            }
+            
+            showSettingsPanel() {
+                // 既存の設定パネルがあれば削除
+                this.closeSettingsPanel();
+                
+                // オーバーレイ作成
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                overlay.id = 'settings-overlay';
+                overlay.onclick = () => this.closeSettingsPanel();
+                
+                // 設定パネル作成
+                const panel = document.createElement('div');
+                panel.className = 'settings-panel';
+                panel.id = 'settings-panel';
+                
+                // アクティビティフィードのHTMLを生成
+                const activityFeedHTML = document.getElementById('activity-feed') ? 
+                    document.getElementById('activity-feed').innerHTML : 
+                    '<div class="feed-item"><div class="feed-icon">🟢</div><div class="feed-content"><div class="feed-text">システムが開始されました</div><div class="feed-time">--:--:--</div></div></div>';
+                
+                panel.innerHTML = `
+                    <div class="settings-header">
+                        <h3 class="settings-title">⚙️ システム設定</h3>
+                        <button class="popup-close" onclick="window.monitor.closeSettingsPanel()">×</button>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <div class="settings-section-title" style="cursor: pointer;" onclick="window.monitor.toggleActivityFeed()">
+                            <span>📋</span>
+                            アクティビティフィード
+                            <span id="activity-feed-toggle" style="margin-left: auto; color: #74b9ff;">▼</span>
+                        </div>
+                        <div class="activity-feed-settings" id="settings-activity-feed" style="display: none;">
+                            ${activityFeedHTML}
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <div class="settings-section-title" style="cursor: pointer;" onclick="window.monitor.toggleMapLayers()">
+                            <span>🗺️</span>
+                            地図設定
+                            <span id="map-layers-toggle" style="margin-left: auto; color: #74b9ff;">▶</span>
+                        </div>
+                        <div class="map-layers-settings" id="settings-map-layers" style="display: none;">
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 14px; color: #a0aec0; margin-bottom: 8px;">
+                                    現在のレイヤー: <span id="current-layer-name" style="color: #74b9ff;">ダーク（明るめ）</span>
+                                </div>
+                            </div>
+                            <div id="layer-options"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <div class="settings-section-title">
+                            <span>🔔</span>
+                            通知設定
+                        </div>
+                        <div style="color: #a0aec0; font-size: 14px;">
+                            ブラウザ通知機能が利用可能です
+                        </div>
+                    </div>
+                `;
+                
+                // DOM に追加
+                document.body.appendChild(overlay);
+                document.body.appendChild(panel);
+                
+                // アクティビティログに記録
+                this.addActivityFeedItem('⚙️', 'システム設定を開きました', new Date());
+            }
+            
+            closeSettingsPanel() {
+                const overlay = document.getElementById('settings-overlay');
+                const panel = document.getElementById('settings-panel');
+                
+                if (overlay) overlay.remove();
+                if (panel) panel.remove();
+            }
+            
+            toggleActivityFeed() {
+                const feedContainer = document.getElementById('settings-activity-feed');
+                const toggleIcon = document.getElementById('activity-feed-toggle');
+                
+                if (feedContainer && toggleIcon) {
+                    const isVisible = feedContainer.style.display !== 'none';
+                    
+                    if (isVisible) {
+                        feedContainer.style.display = 'none';
+                        toggleIcon.textContent = '▶';
+                    } else {
+                        feedContainer.style.display = 'block';
+                        toggleIcon.textContent = '▼';
+                        // アクティビティフィードを更新
+                        this.updateActivityFeedDisplay(feedContainer);
+                    }
+                    
+                    // アクティビティログに記録
+                    this.addActivityFeedItem('📋', 
+                        isVisible ? 'アクティビティフィードを閉じました' : 'アクティビティフィードを開きました', 
+                        new Date()
+                    );
+                }
+            }
+            
+            toggleMapLayers() {
+                const layersContainer = document.getElementById('settings-map-layers');
+                const toggleIcon = document.getElementById('map-layers-toggle');
+                
+                if (layersContainer && toggleIcon) {
+                    const isVisible = layersContainer.style.display !== 'none';
+                    
+                    if (isVisible) {
+                        layersContainer.style.display = 'none';
+                        toggleIcon.textContent = '▶';
+                    } else {
+                        layersContainer.style.display = 'block';
+                        toggleIcon.textContent = '▼';
+                        // 地図レイヤーオプションを更新
+                        this.updateMapLayerOptions();
+                    }
+                    
+                    // アクティビティログに記録
+                    this.addActivityFeedItem('🗺️', 
+                        isVisible ? '地図設定を閉じました' : '地図設定を開きました', 
+                        new Date()
+                    );
+                }
+            }
+            
+            updateMapLayerOptions() {
+                const container = document.getElementById('layer-options');
+                const currentLayerEl = document.getElementById('current-layer-name');
+                
+                if (!container || !this.mapLayers) return;
+                
+                // 現在のレイヤー名を更新
+                if (currentLayerEl) {
+                    currentLayerEl.textContent = this.currentLayerName || 'ダーク（明るめ）';
+                }
+                
+                // 既存のオプションをクリア
+                container.innerHTML = '';
+                
+                // レイヤーオプションを個別に作成
+                Object.keys(this.mapLayers).forEach(layerName => {
+                    const isActive = layerName === this.currentLayerName;
+                    
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = `layer-option ${isActive ? 'active' : ''}`;
+                    optionDiv.setAttribute('data-layer', layerName);
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'layer-option-name';
+                    nameSpan.textContent = layerName;
+                    
+                    const statusSpan = document.createElement('span');
+                    statusSpan.className = 'layer-option-status';
+                    statusSpan.textContent = isActive ? '✓ 使用中' : '';
+                    
+                    optionDiv.appendChild(nameSpan);
+                    optionDiv.appendChild(statusSpan);
+                    
+                    // クリックイベントを直接追加
+                    optionDiv.addEventListener('click', () => {
+                        console.log(`Clicked layer: "${layerName}"`);
+                        this.changeMapLayer(layerName);
+                    });
+                    
+                    container.appendChild(optionDiv);
+                    
+                    console.log(`Created option for "${layerName}", active: ${isActive}`);
+                });
+                
+                console.log(`UI Updated - Current layer: "${this.currentLayerName}"`);
+            }
+            
+            changeMapLayer(layerName) {
+                console.log(`🔄 Changing map layer to: "${layerName}"`);
+                
+                if (!this.mapLayers || !this.mapLayers[layerName] || !this.map) {
+                    console.error(`❌ Layer "${layerName}" not found or map not ready`);
+                    return;
+                }
+                
+                try {
+                    // 現在のレイヤーを削除
+                    if (this.currentLayer) {
+                        this.map.removeLayer(this.currentLayer);
+                        console.log(`🗑️ Removed previous layer`);
+                    }
+                    
+                    // 新しいレイヤーを追加
+                    this.currentLayer = this.mapLayers[layerName];
+                    this.currentLayer.addTo(this.map);
+                    this.currentLayerName = layerName;
+                    
+                    console.log(`✅ Added new layer: "${layerName}"`);
+                    
+                    // UI を即座に更新
+                    this.updateMapLayerOptions();
+                    
+                    // 現在のレイヤー表示も更新
+                    const currentLayerEl = document.getElementById('current-layer-name');
+                    if (currentLayerEl) {
+                        currentLayerEl.textContent = layerName;
+                    }
+                    
+                    // レイヤー変更イベントを手動で発火
+                    this.map.fire('baselayerchange', { name: layerName, layer: this.currentLayer });
+                    
+                    // アクティビティログに記録
+                    this.addActivityFeedItem('🗺️', `地図レイヤーを${layerName}に変更しました`, new Date());
+                    
+                    console.log(`🎯 Successfully changed to: "${layerName}"`);
+                } catch (error) {
+                    console.error(`❌ Error changing layer to "${layerName}":`, error);
+                }
             }
         }
 
@@ -1334,12 +2203,14 @@
                 if (earthquake.latitude && earthquake.longitude) {
                     window.monitor.map.setView([earthquake.latitude, earthquake.longitude], 8);
                 }
+                // 震度情報ポップアップを表示
+                window.monitor.showIntensityPopup(earthquake);
                 console.log(`📍 Selected earthquake: ${earthquake.location}`);
             }
         }
 
         function openSettings() {
-            alert('設定機能は開発中です。');
+            window.monitor.showSettingsPanel();
         }
 
         // アプリケーション開始
