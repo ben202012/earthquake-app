@@ -576,10 +576,72 @@
         /* Leaflet マップスタイルのカスタマイズ */
         .leaflet-container {
             background: #0f1419;
+            border-radius: 8px;
         }
         
-        .leaflet-control-container {
+        /* ズームコントロールのみにfilterを適用 */
+        .leaflet-control-zoom {
             filter: invert(1) hue-rotate(180deg);
+        }
+        
+        /* レイヤーコントロールのスタイル - 確実な可視性 */
+        .leaflet-control-layers {
+            background: rgba(30, 42, 56, 0.95) !important;
+            color: white !important;
+            border: 1px solid rgba(74, 158, 255, 0.3) !important;
+            border-radius: 8px !important;
+            backdrop-filter: blur(10px) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 2000 !important;
+            min-width: 180px !important;
+            padding: 8px !important;
+        }
+        
+        .leaflet-control-layers-expanded {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .leaflet-control-layers-list {
+            display: block !important;
+            visibility: visible !important;
+            color: white !important;
+            padding: 8px 0 !important;
+        }
+        
+        .leaflet-control-layers-toggle {
+            background-image: none !important;
+            background-color: rgba(74, 158, 255, 0.9) !important;
+            border-radius: 6px !important;
+            width: 36px !important;
+            height: 36px !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            position: relative !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .leaflet-control-layers-toggle::before {
+            content: '🗺️';
+            color: white !important;
+            font-size: 16px !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            line-height: 1 !important;
+            z-index: 2001 !important;
+            pointer-events: none !important;
+        }
+        
+        .leaflet-control-layers-toggle:hover {
+            background-color: rgba(74, 158, 255, 1) !important;
+            transform: scale(1.05) !important;
         }
         
         .leaflet-popup-content-wrapper {
@@ -587,10 +649,41 @@
             color: white;
             border-radius: 8px;
             backdrop-filter: blur(10px);
+            border: 1px solid rgba(74, 158, 255, 0.3);
         }
         
         .leaflet-popup-tip {
             background: rgba(15, 20, 25, 0.95);
+        }
+        
+        .japan-region-tooltip {
+            background: rgba(74, 158, 255, 0.9) !important;
+            color: white !important;
+            border: 1px solid rgba(74, 158, 255, 0.5) !important;
+            border-radius: 4px !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            padding: 4px 8px !important;
+        }
+        
+        /* 地震マーカーの強調 */
+        .earthquake-marker {
+            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        /* レイヤーコントロールのスタイル改善 */
+        .leaflet-control-layers-list {
+            color: white !important;
+        }
+        
+        .leaflet-control-layers-base label {
+            color: white !important;
+            font-weight: 500 !important;
+        }
+        
+        .leaflet-control-layers-base input[type="radio"] {
+            accent-color: #4a9eff !important;
         }
     </style>
 </head>
@@ -845,14 +938,126 @@
                     attributionControl: false
                 });
 
-                // ダークテーマ地図
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '© CARTO',
-                    maxZoom: 18,
-                    minZoom: 4
-                }).addTo(this.map);
+                // 複数の地図レイヤーを定義
+                const mapLayers = {
+                    'ダーク（高視認性）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CARTO',
+                        maxZoom: 18,
+                        minZoom: 4
+                    }),
+                    'ダーク（ラベル付き）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CARTO',
+                        maxZoom: 18,
+                        minZoom: 4
+                    }),
+                    'グレースケール': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CARTO',
+                        maxZoom: 18,
+                        minZoom: 4
+                    }),
+                    'ナイトモード': L.tileLayer('https://map1.vis.earthdata.nasa.gov/wmts-webmerc/VIIRS_CityLights_2012/default/{time}/{tilematrixset}{max_zoom}/{z}/{y}/{x}.jpg', {
+                        attribution: 'NASA',
+                        maxZoom: 8,
+                        minZoom: 1,
+                        time: '2016-01-01',
+                        tilematrixset: 'GoogleMapsCompatible_Level'
+                    })
+                };
 
-                console.log('🗺️ Map initialized with dark theme');
+                // デフォルトレイヤー（高視認性ダーク）を設定
+                const defaultLayer = mapLayers['ダーク（高視認性）'];
+                defaultLayer.addTo(this.map);
+
+                // レイヤーコントロールを追加（常に展開表示）
+                const layerControl = L.control.layers(mapLayers, null, {
+                    position: 'topright',
+                    collapsed: false
+                }).addTo(this.map);
+                
+                // コントロールの可視性を確実に維持
+                setTimeout(() => {
+                    const controlElement = document.querySelector('.leaflet-control-layers');
+                    const toggleElement = document.querySelector('.leaflet-control-layers-toggle');
+                    
+                    if (controlElement) {
+                        controlElement.style.display = 'block !important';
+                        controlElement.style.visibility = 'visible !important';
+                        controlElement.style.opacity = '1 !important';
+                        controlElement.style.zIndex = '2000 !important';
+                        
+                        // レイヤーリストを常に表示
+                        const layersList = controlElement.querySelector('.leaflet-control-layers-list');
+                        if (layersList) {
+                            layersList.style.display = 'block !important';
+                        }
+                    }
+                    
+                    if (toggleElement) {
+                        toggleElement.style.display = 'block !important';
+                        toggleElement.style.visibility = 'visible !important';
+                        toggleElement.style.opacity = '1 !important';
+                    }
+                }, 100);
+                
+                // イベントリスナーでレイヤー変更を監視
+                this.map.on('baselayerchange', (e) => {
+                    console.log(`🗺️ Map layer changed to: ${e.name}`);
+                    this.addActivityFeedItem('🗺️', `地図レイヤーを${e.name}に変更しました`, new Date());
+                });
+
+                // カスタムスタイル（日本列島を強調）
+                this.addJapanOverlay();
+
+                console.log('🗺️ Map initialized with enhanced visibility for Japan');
+            }
+
+            addJapanOverlay() {
+                // 日本列島の境界線を強調するスタイル
+                const japanStyle = {
+                    color: '#4a9eff',
+                    weight: 2,
+                    opacity: 0.8,
+                    fillColor: 'transparent',
+                    fillOpacity: 0
+                };
+
+                // 簡略化された日本列島の境界（主要4島）
+                const japanBounds = [
+                    // 本州おおよその境界
+                    [
+                        [35.7, 139.7], // 東京
+                        [34.7, 135.5], // 大阪
+                        [33.6, 130.4], // 福岡
+                        [38.3, 140.9], // 仙台
+                        [43.1, 141.3], // 札幌
+                        [35.7, 139.7]  // 戻り
+                    ]
+                ];
+
+                // 日本列島の大まかなエリアを円で表示
+                const japanCircles = [
+                    { center: [35.676, 139.650], radius: 50000, name: '関東' },
+                    { center: [34.693, 135.502], radius: 40000, name: '関西' },
+                    { center: [35.011, 135.768], radius: 30000, name: '中部' },
+                    { center: [33.584, 130.401], radius: 35000, name: '九州' },
+                    { center: [43.064, 141.347], radius: 45000, name: '北海道' },
+                    { center: [38.268, 140.872], radius: 30000, name: '東北' }
+                ];
+
+                japanCircles.forEach(region => {
+                    L.circle(region.center, {
+                        radius: region.radius,
+                        color: '#4a9eff',
+                        weight: 1,
+                        opacity: 0.3,
+                        fillColor: '#4a9eff',
+                        fillOpacity: 0.05
+                    }).addTo(this.map).bindTooltip(region.name, { 
+                        permanent: false, 
+                        direction: 'center',
+                        className: 'japan-region-tooltip'
+                    });
+                });
             }
 
             connectWebSocket() {
@@ -973,12 +1178,13 @@
                         const opacity = 1 - (index * 0.1); // 古いものほど薄く
                         
                         const marker = L.circleMarker([eq.latitude, eq.longitude], {
-                            radius: Math.max(6, eq.magnitude * 2),
+                            radius: Math.max(8, eq.magnitude * 2.5),
                             fillColor: this.getEarthquakeColor(eq.magnitude),
                             color: '#ffffff',
-                            weight: 2,
+                            weight: 3,
                             opacity: opacity,
-                            fillOpacity: opacity * 0.8
+                            fillOpacity: opacity * 0.9,
+                            className: 'earthquake-marker'
                         }).addTo(this.map);
 
                         marker.bindPopup(`
