@@ -1101,6 +1101,21 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(116, 185, 255, 0.3);
         }
+
+        /* === ホームボタンコントロール === */
+        .home-control {
+            transition: all 0.3s ease !important;
+        }
+
+        .home-control:hover {
+            background-color: rgba(74, 158, 255, 1) !important;
+            transform: scale(1.1) !important;
+            box-shadow: 0 2px 8px rgba(74, 158, 255, 0.5) !important;
+        }
+
+        .home-control:active {
+            transform: scale(0.95) !important;
+        }
     </style>
 </head>
 <body>
@@ -1284,6 +1299,13 @@
                 
                 // 設定データ
                 this.settings = this.loadSettings();
+                
+                // 地図状態管理
+                this.mapState = {
+                    initialView: { center: [36.2, 138.2], zoom: 5 },
+                    isAtInitialView: true,
+                    homeControl: null
+                };
                 
                 this.init();
             }
@@ -1473,6 +1495,12 @@
 
                 // カスタムスタイル（日本列島を強調）
                 this.addJapanOverlay();
+                
+                // ホームボタンコントロールを追加
+                this.addHomeControl();
+                
+                // 地図移動イベントを監視
+                this.setupMapEventListeners();
 
                 console.log('🗺️ Map initialized with enhanced visibility for Japan');
             }
@@ -1524,6 +1552,105 @@
                         className: 'japan-region-tooltip'
                     });
                 });
+            }
+
+            // ホームボタンコントロールを追加
+            addHomeControl() {
+                // Leafletカスタムコントロールクラス
+                const HomeControl = L.Control.extend({
+                    onAdd: (map) => {
+                        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom home-control');
+                        
+                        container.style.backgroundColor = 'rgba(74, 158, 255, 0.9)';
+                        container.style.backgroundImage = "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDIwVjE0SDEzLjU4NTlWMjBIMTlWMTJIMjJMMTIgM0wyIDEySDE5VjIwSDEwWiIgZmlsbD0id2hpdGUiLz4KPHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPC9zdmc+Cjwvc3ZnPgo=')";
+                        container.style.backgroundSize = '16px 16px';
+                        container.style.backgroundRepeat = 'no-repeat';
+                        container.style.backgroundPosition = 'center';
+                        container.style.width = '30px';
+                        container.style.height = '30px';
+                        container.style.cursor = 'pointer';
+                        container.style.border = '2px solid rgba(255, 255, 255, 0.8)';
+                        container.style.borderRadius = '4px';
+                        container.style.boxShadow = '0 1px 5px rgba(0,0,0,0.65)';
+                        container.style.display = 'none'; // 初期状態では非表示
+                        container.title = '初期画面に戻る';
+                        
+                        container.onclick = () => {
+                            this.returnToHome();
+                        };
+                        
+                        L.DomEvent.disableClickPropagation(container);
+                        return container;
+                    },
+                    
+                    onRemove: (map) => {
+                        // cleanup
+                    }
+                });
+                
+                // ホームコントロールを地図に追加（左上に配置）
+                this.mapState.homeControl = new HomeControl({ position: 'topleft' });
+                this.mapState.homeControl.addTo(this.map);
+            }
+            
+            // 地図移動イベントリスナーを設定
+            setupMapEventListeners() {
+                // 地図の移動・ズーム・パンイベントを監視
+                this.map.on('moveend zoomend', () => {
+                    this.checkMapPosition();
+                });
+            }
+            
+            // 地図位置をチェックして初期画面かどうか判定
+            checkMapPosition() {
+                const currentCenter = this.map.getCenter();
+                const currentZoom = this.map.getZoom();
+                const initialView = this.mapState.initialView;
+                
+                // 初期位置との距離と ズームレベルをチェック
+                const centerDistance = currentCenter.distanceTo(L.latLng(initialView.center));
+                const zoomDifference = Math.abs(currentZoom - initialView.zoom);
+                
+                // 許容範囲内（距離50km以内、ズーム差1以下）なら初期画面とみなす
+                const isAtInitialView = centerDistance < 50000 && zoomDifference <= 1;
+                
+                if (isAtInitialView !== this.mapState.isAtInitialView) {
+                    this.mapState.isAtInitialView = isAtInitialView;
+                    this.updateHomeControlVisibility();
+                }
+            }
+            
+            // ホームコントロールの表示/非表示を更新
+            updateHomeControlVisibility() {
+                if (this.mapState.homeControl) {
+                    const container = this.mapState.homeControl.getContainer();
+                    if (container) {
+                        if (this.mapState.isAtInitialView) {
+                            container.style.display = 'none';
+                        } else {
+                            container.style.display = 'block';
+                            // フェードイン効果
+                            container.style.opacity = '0';
+                            setTimeout(() => {
+                                container.style.transition = 'opacity 0.3s ease';
+                                container.style.opacity = '1';
+                            }, 50);
+                        }
+                    }
+                }
+            }
+            
+            // 初期画面に戻る
+            returnToHome() {
+                const initialView = this.mapState.initialView;
+                this.map.setView(initialView.center, initialView.zoom, {
+                    animate: true,
+                    duration: 1.0
+                });
+                
+                // アクティビティログに記録
+                this.addActivityFeedItem('🏠', '地図を初期画面に戻しました', new Date());
+                console.log('🏠 Map returned to initial view');
             }
 
             connectWebSocket() {
@@ -1602,12 +1729,48 @@
                     this.updateOverlayInfo(earthquake);
                     this.updateStatistics(earthquake);
                     
+                    // 通知条件のチェック
+                    this.checkAndSendNotification(earthquake);
+                    
                     this.addActivityFeedItem('🔴', 
                         `地震発生: ${earthquake.location} M${earthquake.magnitude} 震度${earthquake.maxIntensity}`, 
                         new Date()
                     );
                     
                     console.log(`🌏 Earthquake detected: ${earthquake.location} M${earthquake.magnitude}`);
+                }
+            }
+            
+            // 通知条件チェックと送信
+            checkAndSendNotification(earthquake) {
+                const magnitude = earthquake.magnitude || 0;
+                const intensity = this.getNumericIntensity(earthquake.maxIntensity);
+                
+                // 設定値と比較
+                const shouldNotify = magnitude >= this.settings.magnitudeThreshold || 
+                                   intensity >= this.settings.intensityThreshold;
+                
+                if (shouldNotify && this.settings.notifications) {
+                    // ブラウザ通知
+                    if (Notification.permission === 'granted') {
+                        new Notification('🌏 地震発生警報', {
+                            body: `${earthquake.location}\nM${magnitude.toFixed(1)} 震度${earthquake.maxIntensity}\n${earthquake.time.toLocaleString('ja-JP')}`,
+                            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNlMTcwNTUiLz4KPHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPC9zdmc+Cjwvc3ZnPgo=',
+                            requireInteraction: true // 重要な通知なので手動で閉じるまで表示
+                        });
+                    }
+                    
+                    // 音声アラート（3回繰り返し）
+                    this.playAlertSound(3);
+                    
+                    this.addActivityFeedItem('🚨', 
+                        `警報発信: M${magnitude.toFixed(1)} 震度${earthquake.maxIntensity} (閾値: M${this.settings.magnitudeThreshold} 震度${this.settings.intensityThreshold})`, 
+                        new Date()
+                    );
+                    
+                    console.log(`🚨 Alert triggered: M${magnitude.toFixed(1)} intensity ${earthquake.maxIntensity}`);
+                } else {
+                    console.log(`ℹ️ No alert: M${magnitude.toFixed(1)} intensity ${earthquake.maxIntensity} (below thresholds)`);
                 }
             }
 
@@ -2308,28 +2471,49 @@
             
             testSound() {
                 try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-                    
-                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(this.settings.volume / 100 * 0.3, audioContext.currentTime + 0.01);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                    
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.3);
-                    
-                    this.addActivityFeedItem('🔊', '音声テストを実行しました', new Date());
+                    this.playAlertSound(3); // 3回繰り返し再生
+                    this.addActivityFeedItem('🔊', '音声テストを実行しました（3回再生）', new Date());
                 } catch (error) {
                     console.error('音声テスト失敗:', error);
                     alert('音声テストに失敗しました。ブラウザの設定を確認してください。');
+                }
+            }
+            
+            // 音声アラート再生関数（繰り返し対応）
+            playAlertSound(repeatCount = 1) {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const volume = this.settings.volume / 100 * 0.3;
+                    
+                    for (let i = 0; i < repeatCount; i++) {
+                        const delay = i * 0.8; // 0.8秒間隔で再生
+                        
+                        // 各回の音声作成
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        // 周波数パターン（警告音らしい音程）
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime + delay);
+                        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + delay + 0.1);
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime + delay + 0.2);
+                        
+                        // 音量エンベロープ
+                        gainNode.gain.setValueAtTime(0, audioContext.currentTime + delay);
+                        gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + delay + 0.01);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + delay + 0.3);
+                        
+                        // 再生時間設定
+                        oscillator.start(audioContext.currentTime + delay);
+                        oscillator.stop(audioContext.currentTime + delay + 0.3);
+                    }
+                    
+                    console.log(`🔊 音声アラートを${repeatCount}回再生開始`);
+                } catch (error) {
+                    console.error('音声再生エラー:', error);
+                    throw error;
                 }
             }
             
@@ -2487,8 +2671,13 @@
             const earthquake = window.monitor.earthquakeHistory.find(eq => eq.id === id);
             if (earthquake) {
                 window.monitor.updateOverlayInfo(earthquake);
-                if (earthquake.latitude && earthquake.longitude) {
+                // 自動ズーム設定が有効かつ座標がある場合のみ地図を移動
+                if (window.monitor.settings.autoZoom && earthquake.latitude && earthquake.longitude) {
                     window.monitor.map.setView([earthquake.latitude, earthquake.longitude], 8);
+                    // 地図移動後に位置チェックを実行（ホームボタン表示のため）
+                    setTimeout(() => {
+                        window.monitor.checkMapPosition();
+                    }, 100);
                 }
                 // 震度情報ポップアップを表示
                 window.monitor.showIntensityPopup(earthquake);

@@ -20,7 +20,7 @@
 
 ### 🏗️ アーキテクチャ v2.0 (プロフェッショナル)
 - **モジュール化設計**: EventBus + Component-based Architecture
-- **KyoshinEewViewerIngen準拠**: 業界標準アーキテクチャパターン採用
+- **プロフェッショナル設計**: 業界標準アーキテクチャパターン採用
 - **スケーラブル構成**: 新機能追加・保守が容易な設計
 - **パフォーマンス最適化**: メモリ使用量監視・自動最適化
 
@@ -392,4 +392,4 @@ src/
 **完成度**: 80% (目標達成)  
 **バージョン**: 2.0.0 Professional  
 **対応環境**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+  
-**アーキテクチャ**: KyoshinEewViewerIngen準拠 Component-based Design
+**アーキテクチャ**: Professional Component-based Design
