@@ -975,6 +975,132 @@
         .leaflet-control-layers-base input[type="radio"] {
             accent-color: #4a9eff !important;
         }
+        /* === 設定パネルスタイル === */
+        .setting-item {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #74b9ff;
+            margin-bottom: 8px;
+        }
+
+        .setting-input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .setting-input-group input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .setting-input-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #74b9ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .setting-input-group select {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .setting-input-group select option {
+            background: #2d3748;
+            color: #ffffff;
+        }
+
+        .setting-value {
+            min-width: 60px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #74b9ff;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #74b9ff;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .test-button {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 8px;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(116, 185, 255, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -1155,6 +1281,10 @@
                 };
                 this.map = null;
                 this.websocket = null;
+                
+                // 設定データ
+                this.settings = this.loadSettings();
+                
                 this.init();
             }
 
@@ -2004,7 +2134,7 @@
                         <div class="settings-section-title" style="cursor: pointer;" onclick="window.monitor.toggleActivityFeed()">
                             <span>📋</span>
                             アクティビティフィード
-                            <span id="activity-feed-toggle" style="margin-left: auto; color: #74b9ff;">▼</span>
+                            <span id="activity-feed-toggle" style="margin-left: auto; color: #74b9ff;">▶</span>
                         </div>
                         <div class="activity-feed-settings" id="settings-activity-feed" style="display: none;">
                             ${activityFeedHTML}
@@ -2028,12 +2158,55 @@
                     </div>
                     
                     <div class="settings-section">
-                        <div class="settings-section-title">
+                        <div class="settings-section-title" style="cursor: pointer;" onclick="window.monitor.toggleNotificationSettings()">
                             <span>🔔</span>
                             通知設定
+                            <span id="notification-settings-toggle" style="margin-left: auto; color: #74b9ff;">▶</span>
                         </div>
-                        <div style="color: #a0aec0; font-size: 14px;">
-                            ブラウザ通知機能が利用可能です
+                        <div class="notification-settings" id="settings-notification" style="display: none;">
+                        <div class="setting-item">
+                            <label class="setting-label">マグニチュード閾値</label>
+                            <div class="setting-input-group">
+                                <input type="range" id="magnitude-threshold" min="2.0" max="8.0" step="0.1" value="${this.settings.magnitudeThreshold}" 
+                                       onchange="window.monitor.updateSetting('magnitudeThreshold', parseFloat(this.value)); document.getElementById('magnitude-value').textContent = 'M' + this.value">
+                                <span id="magnitude-value" class="setting-value">M${this.settings.magnitudeThreshold}</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">震度閾値</label>
+                            <div class="setting-input-group">
+                                <select id="intensity-threshold" onchange="window.monitor.updateSetting('intensityThreshold', parseInt(this.value))">
+                                    <option value="1" ${this.settings.intensityThreshold === 1 ? 'selected' : ''}>震度1</option>
+                                    <option value="2" ${this.settings.intensityThreshold === 2 ? 'selected' : ''}>震度2</option>
+                                    <option value="3" ${this.settings.intensityThreshold === 3 ? 'selected' : ''}>震度3</option>
+                                    <option value="4" ${this.settings.intensityThreshold === 4 ? 'selected' : ''}>震度4</option>
+                                    <option value="5" ${this.settings.intensityThreshold === 5 ? 'selected' : ''}>震度5弱以上</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">音量</label>
+                            <div class="setting-input-group">
+                                <input type="range" id="volume-setting" min="0" max="100" step="5" value="${this.settings.volume}" 
+                                       onchange="window.monitor.updateSetting('volume', parseInt(this.value)); document.getElementById('volume-value').textContent = this.value + '%'">
+                                <span id="volume-value" class="setting-value">${this.settings.volume}%</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">自動ズーム</label>
+                            <div class="setting-input-group">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="auto-zoom" ${this.settings.autoZoom ? 'checked' : ''} 
+                                           onchange="window.monitor.updateSetting('autoZoom', this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="setting-value">${this.settings.autoZoom ? '有効' : '無効'}</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <button class="test-button" onclick="window.monitor.testNotification()">🔔 通知テスト</button>
+                            <button class="test-button" onclick="window.monitor.testSound()">🔊 音声テスト</button>
+                        </div>
                         </div>
                     </div>
                 `;
@@ -2044,6 +2217,120 @@
                 
                 // アクティビティログに記録
                 this.addActivityFeedItem('⚙️', 'システム設定を開きました', new Date());
+            }
+            
+            toggleNotificationSettings() {
+                const settingsContainer = document.getElementById('settings-notification');
+                const toggleIcon = document.getElementById('notification-settings-toggle');
+                
+                if (settingsContainer && toggleIcon) {
+                    const isVisible = settingsContainer.style.display !== 'none';
+                    
+                    if (isVisible) {
+                        settingsContainer.style.display = 'none';
+                        toggleIcon.textContent = '▶';
+                    } else {
+                        settingsContainer.style.display = 'block';
+                        toggleIcon.textContent = '▼';
+                    }
+                    
+                    // アクティビティログに記録
+                    this.addActivityFeedItem('🔔', 
+                        isVisible ? '通知設定を閉じました' : '通知設定を開きました', 
+                        new Date()
+                    );
+                }
+            }
+            
+            // 設定管理メソッド
+            loadSettings() {
+                const defaultSettings = {
+                    magnitudeThreshold: 4.0,
+                    intensityThreshold: 3,
+                    volume: 50,
+                    autoZoom: true,
+                    notifications: true
+                };
+                
+                try {
+                    const saved = localStorage.getItem('earthquake_settings');
+                    if (saved) {
+                        return { ...defaultSettings, ...JSON.parse(saved) };
+                    }
+                } catch (error) {
+                    console.warn('設定の読み込みに失敗しました:', error);
+                }
+                
+                return defaultSettings;
+            }
+            
+            saveSettings() {
+                try {
+                    localStorage.setItem('earthquake_settings', JSON.stringify(this.settings));
+                    this.addActivityFeedItem('💾', '設定を保存しました', new Date());
+                } catch (error) {
+                    console.error('設定の保存に失敗しました:', error);
+                }
+            }
+            
+            updateSetting(key, value) {
+                this.settings[key] = value;
+                this.saveSettings();
+                
+                // 自動ズーム設定が変更された場合の UI 更新
+                if (key === 'autoZoom') {
+                    const toggleElement = document.getElementById('auto-zoom');
+                    const valueElement = toggleElement?.parentElement?.nextElementSibling;
+                    if (valueElement) {
+                        valueElement.textContent = value ? '有効' : '無効';
+                    }
+                }
+            }
+            
+            // テスト機能
+            testNotification() {
+                if (Notification.permission === 'granted') {
+                    new Notification('🌏 地震監視システム', {
+                        body: 'テスト通知が正常に送信されました。\nM4.5 テスト地震 震度3',
+                        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM3NGI5ZmYiLz4KPHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPC9zdmc+Cjwvc3ZnPgo='
+                    });
+                    this.addActivityFeedItem('🔔', '通知テストを実行しました', new Date());
+                } else if (Notification.permission === 'denied') {
+                    alert('通知が拒否されています。ブラウザの設定から通知を許可してください。');
+                } else {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            this.testNotification();
+                        }
+                    });
+                }
+            }
+            
+            testSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(this.settings.volume / 100 * 0.3, audioContext.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                    
+                    this.addActivityFeedItem('🔊', '音声テストを実行しました', new Date());
+                } catch (error) {
+                    console.error('音声テスト失敗:', error);
+                    alert('音声テストに失敗しました。ブラウザの設定を確認してください。');
+                }
             }
             
             closeSettingsPanel() {
