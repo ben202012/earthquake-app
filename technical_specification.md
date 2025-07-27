@@ -1,64 +1,125 @@
-# 地震速報アプリ 技術仕様書
+# 🌏 地震監視システム v2.0 - Professional Technical Specification
 
 ## 1. システム概要
 
-### 1.1 アーキテクチャ図
+### 1.1 プロフェッショナルアーキテクチャ図
 ```
-┌─────────────────────┐    ┌─────────────────────┐
-│                     │    │                     │
-│ ブラウザ            │    │ P2P地震情報          │
-│ (HTML/CSS/JS)       ├────┤ WebSocket API       │
-│                     │    │                     │
-└─────────┬───────────┘    └─────────────────────┘
-          │
-          │
-          │                ┌─────────────────────┐
-          │                │                     │
-          └────────────────┤ 気象庁API            │
-                           │ (RSS/JSON)          │
-                           │                     │
-                           └─────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Professional Browser Application          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌───────────────┐ │
+│  │  Professional   │  │   Component     │  │   Advanced    │ │
+│  │   Dashboard     │  │  Architecture   │  │     UI        │ │
+│  │   (Grid Layout) │  │  (EventBus +    │  │ (Dark Theme   │ │
+│  │                 │  │   BaseComponent)│  │   + Animations│ │
+│  └─────────────────┘  └─────────────────┘  └───────────────┘ │
+│                                                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌───────────────┐ │
+│  │ Real-time Map   │  │ P2P Panel       │  │ Activity Feed │ │
+│  │ (Leaflet.js +   │  │ (Dashboard +    │  │ (System Log + │ │
+│  │  Earthquake     │  │  Statistics +   │  │  Performance  │ │
+│  │  Markers)       │  │  EEW Status)    │  │  Monitoring)  │ │
+│  └─────────────────┘  └─────────────────┘  └───────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Data Sources & APIs                      │
+│                                                             │
+│  ┌─────────────────┐           ┌─────────────────────────┐  │
+│  │ P2P地震情報      │           │    Historical Data       │  │
+│  │ WebSocket API   │◄─────────►│    (P2P History API)     │  │
+│  │ (Real-time)     │           │    (60秒間隔取得)        │  │
+│  └─────────────────┘           └─────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 技術スタック
-- **フロントエンド**: HTML5, CSS3, Vanilla JavaScript (ES6+)
-- **リアルタイム通信**: WebSocket API
-- **地図表示**: Leaflet.js
-- **通知**: Notification API
-- **データ取得**: Fetch API
-- **デプロイ**: 静的ホスティング（GitHub Pages等）
+### 1.2 Professional Technology Stack v2.0
+- **Architecture**: Component-based Design (KyoshinEewViewerIngen準拠)
+- **Core Framework**: Vanilla JavaScript ES6+ Modules
+- **Event System**: Custom EventBus Pattern
+- **UI Framework**: Professional Component Library
+- **Real-time Communication**: WebSocket API + Auto-reconnection
+- **Map Visualization**: Leaflet.js + Custom Earthquake Markers
+- **Notification System**: Notification API + Custom Audio System
+- **Data Management**: Advanced LocalStorage + Data Persistence
+- **Performance**: Memory Monitoring + Auto-optimization
+- **Deployment**: Static Hosting (GitHub Pages/Netlify/Vercel)
 
 ## 2. システム構成
 
 ### 2.1 フロントエンド構成
 
-#### 2.1.1 ファイル構成
+#### 2.1.1 Professional File Structure v2.0
 ```
-index.html          # メインHTML
-test.html           # テスト用HTML（デバッグ機能付き）
-styles.css          # スタイルシート
-script.js           # メインJavaScript
-earthquake-api.js   # API通信クラス
-notification.js     # 通知機能クラス
-map.js              # 地図表示機能
-config.js           # 設定管理
-requirements.md     # 要件定義書
-technical_specification.md # 技術仕様書
+# Professional Architecture Files
+index.html              # Professional Dashboard (Main App)
+index-new.html          # Modular Architecture Version
+styles.css              # Legacy styles (for compatibility)
+
+# Core Architecture (v2.0)
+src/
+├── core/
+│   ├── EventBus.js         # Central Event Management System
+│   ├── BaseComponent.js    # Base class for all UI components
+│   └── App.js             # Main Application Controller
+├── components/
+│   └── panels/
+│       └── P2PPanel.js     # P2P Earthquake Information Panel
+├── models/
+│   └── Earthquake.js       # Earthquake Data Model & Validation
+└── styles/
+    └── components.css      # Professional Component Styles
+
+# Legacy Files (v1.0 compatibility)
+test.html               # Test & Debug Interface
+script.js               # Legacy main script
+earthquake-api.js       # Legacy API communication
+notification.js         # Legacy notification system
+map.js                  # Legacy map functionality
+config.js               # Configuration management
+
+# Documentation
+README.md               # Professional System Documentation
+requirements.md         # System Requirements Specification
+technical_specification.md # Professional Technical Specification
+ARCHITECTURE_REDESIGN.md   # Architecture Design Document
 ```
 
-#### 2.1.2 画面レイアウト
-- **ヘッダー**: アプリタイトル、接続状態表示、設定ボタン
-- **左側パネル（60%）**:
-  - **上部 P2Pパネル**: 
-    - 緊急地震速報ステータス表示（`eew-status`）
-    - 日本列島地震活動状況ダッシュボード（`japan-status-dashboard`）
-    - リアルタイム活動フィード（`activity-feed`）
-    - レーダーパルス監視アニメーション
-  - **下部 JMAパネル**: 直近10件の地震履歴情報表示（クリック可能カード）
-- **右側パネル（40%）**: インタラクティブ地図（Leaflet.js）
-- **サイドバー**: 設定パネル（スライド式表示/非表示）
-- **モーダルウィンドウ**: 地震詳細情報表示（JMAカードクリック時）
-- **固定強震モニタパネル**: 右上固定配置のリアルタイム震度表示iframe
+#### 2.1.2 プロフェッショナルダッシュボード レイアウト v2.0
+
+**Grid-based プロフェッショナルインターフェース**
+```css
+.earthquake-dashboard {
+    display: grid;
+    grid-template-columns: 350px 1fr 400px;
+    grid-template-rows: 70px 1fr;
+    grid-template-areas: 
+        "header header header"
+        "sidebar main rightpanel";
+}
+```
+
+##### 主要コンポーネント:
+- **メインヘッダー (高さ70px)**:
+  - 🌏 アプリロゴ + タイトル "地震監視システム"
+  - 🔌 P2P/API接続ステータスインジケーター（緑/赤）
+  - 🕐 リアルタイム時計表示
+  - ⚙️ 設定ボタン
+
+- **左サイドバー (幅350px)**:
+  - **⚡ 緊急地震速報セクション**: EEWステータス表示
+  - **📊 監視統計セクション**: 今日/今週の地震数、最大震度、応答時間
+  - **🔴 最新地震情報セクション**: スクロール可能な地震履歴リスト
+
+- **メインコンテンツエリア (中央)**:
+  - **🗺️ インタラクティブ地図**: Leaflet.js + ダークテーマ
+  - **📍 震源位置情報オーバーレイ**: 北緯・東経・深さ・マグニチュード表示
+
+- **右パネル (幅400px)**:
+  - **📡 リアルタイム監視ヘッダー**: "LIVE" インジケーター
+  - **⏰ システム時刻セクション**: JST時計 + 日付表示
+  - **📈 パフォーマンスメトリクス**: 稼働時間・受信データ・メモリ使用量・活発地域
+  - **📋 アクティビティフィード**: システムイベント・地震発生ログ
 
 ### 2.2 データ管理
 
@@ -495,3 +556,204 @@ class FixedKmoniPanel {
 - **TypeScript化**: 型安全性の向上
 - **モジュール分割**: ES6 Modules使用
 - **テスト導入**: Jest等でのユニットテスト
+
+## 13. プロフェッショナルアーキテクチャ詳細 v2.0
+
+### 13.1 Component-based アーキテクチャ
+
+#### 13.1.1 EventBus システム
+```javascript
+// 中央イベント管理システム
+class EventBus {
+    constructor() {
+        this.events = new Map();
+        this.onceEvents = new Map();
+    }
+    
+    subscribe(event, callback, context = null)  // イベント購読
+    publish(event, data)                        // イベント発行
+    once(event, callback, context = null)       // 一回限りの購読
+    clear(event = null)                         // イベントクリア
+}
+```
+
+#### 13.1.2 BaseComponent クラス
+```javascript
+// 全コンポーネントの基底クラス
+class BaseComponent {
+    constructor(container, options = {}) {
+        this.container = container;
+        this.options = { ...this.defaultOptions, ...options };
+        this.eventBus = eventBus;
+        this.element = null;
+        this.isInitialized = false;
+        this.isDestroyed = false;
+    }
+    
+    // ライフサイクルメソッド
+    async init()              // 初期化処理
+    async render()            // DOM要素レンダリング
+    async setupEventListeners() // イベントリスナー設定
+    async update(data)        // コンポーネント更新
+    destroy()                 // コンポーネント破棄
+    
+    // ユーティリティメソッド
+    subscribeToEvent(event, callback)
+    addEventListener(element, event, callback)
+    createElement(tag, classes, attributes)
+    createFromTemplate(template, data)
+}
+```
+
+#### 13.1.3 P2PPanel コンポーネント
+```javascript
+// P2P地震情報表示パネル
+class P2PPanel extends BaseComponent {
+    constructor(container, options = {}) {
+        super(container, options);
+        this.connectionStatus = 'disconnected';
+        this.dashboardStats = {
+            todayCount: 0,
+            weekCount: 0,
+            maxIntensity: '-',
+            activeRegions: '-',
+            responseTime: 0,
+            dataPackets: 0
+        };
+        this.activityFeed = [];
+        this.eewStatus = { isActive: false, message: '発信なし' };
+    }
+    
+    // 主要メソッド
+    handleEarthquakeDetected(earthquake)  // 地震検出処理
+    handleEEW(eewData)                   // 緊急地震速報処理
+    updateStatistics(earthquake)         // 統計情報更新
+    addActivityFeedItem(item)           // 活動フィード追加
+    updateDashboard()                   // ダッシュボード更新
+}
+```
+
+#### 13.1.4 Earthquake データモデル
+```javascript
+// 厳密な地震データモデル
+class Earthquake {
+    constructor(rawData, source = 'unknown') {
+        this.id = this.generateId(rawData, source);
+        this.source = source;
+        this.timestamp = this.parseTimestamp(rawData.time);
+        this.magnitude = parseFloat(rawData.magnitude) || null;
+        this.depth = parseInt(rawData.depth) || null;
+        this.location = rawData.location || '';
+        this.coordinates = this.parseCoordinates(rawData);
+        this.maxIntensity = this.parseMaxIntensity(rawData);
+        this.intensityPoints = this.parseIntensityPoints(rawData);
+        this.tsunami = this.parseTsunamiInfo(rawData);
+        this.validate(); // データ検証
+    }
+    
+    // 検証・フォーマット・変換メソッド
+    validate()                    // データ妥当性検証
+    formatTime(format = 'full')   // 時刻フォーマット
+    formatMagnitude()             // マグニチュード表示
+    toGeoJSON()                   // GeoJSON変換
+    toJSON()                      // JSON変換
+    static fromJSON(json)         // JSON復元
+}
+```
+
+### 13.2 プロフェッショナル機能実装
+
+#### 13.2.1 パフォーマンス監視
+```javascript
+// リアルタイムパフォーマンス監視
+startPerformanceMonitoring() {
+    setInterval(() => {
+        // メモリ使用量監視
+        if (performance.memory) {
+            this.performanceMetrics.memoryUsage = Math.round(
+                performance.memory.usedJSHeapSize / 1024 / 1024
+            );
+            
+            // 閾値超過時の警告
+            if (this.performanceMetrics.memoryUsage > 100) {
+                console.warn(`⚠️ High memory usage: ${this.performanceMetrics.memoryUsage}MB`);
+                this.eventBus.publish('app.performance.warning', {
+                    type: 'memory',
+                    value: this.performanceMetrics.memoryUsage
+                });
+            }
+        }
+        
+        // コンポーネント健全性チェック
+        this.componentInstances.forEach(component => {
+            if (component.isDestroyed) {
+                console.warn('⚠️ Destroyed component found:', component.id);
+            }
+        });
+    }, 30000); // 30秒ごと
+}
+```
+
+#### 13.2.2 エラーハンドリング
+```javascript
+// 包括的エラー処理システム
+handleComponentError(errorData) {
+    console.error(`❌ Component error in ${errorData.id}:`, errorData.error);
+    
+    // エラー統計更新
+    this.performanceMetrics.errorCount = (this.performanceMetrics.errorCount || 0) + 1;
+    
+    // エラー復旧処理
+    if (errorData.type === 'connection') {
+        this.attemptReconnection();
+    }
+}
+
+handleWebSocketError(error) {
+    console.error('❌ WebSocket Error:', error);
+    this.eventBus.publish('api.error', { type: 'websocket', error });
+    
+    // 自動再接続（最大3回）
+    if (this.reconnectAttempts < 3) {
+        setTimeout(() => {
+            this.reconnectAttempts++;
+            this.connectWebSocket();
+        }, 5000 * this.reconnectAttempts);
+    }
+}
+```
+
+#### 13.2.3 データ永続化
+```javascript
+// LocalStorage活用の高度なデータ管理
+saveData() {
+    try {
+        // 設定の保存
+        localStorage.setItem('earthquake_app_settings', JSON.stringify(this.settings));
+        
+        // 履歴の保存（最新100件のみ）
+        const historyToSave = this.earthquakeHistory
+            .slice(0, this.settings.performance.maxHistoryItems)
+            .map(earthquake => earthquake.toJSON());
+        
+        localStorage.setItem('earthquake_history', JSON.stringify(historyToSave));
+        
+        // 保存完了イベント
+        this.eventBus.publish('app.data.saved', {
+            settingsSize: JSON.stringify(this.settings).length,
+            historySize: historyToSave.length
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to save data:', error);
+        this.eventBus.publish('app.error', { error, phase: 'save' });
+    }
+}
+```
+
+---
+
+**最終更新**: 2025年7月26日  
+**バージョン**: 2.0.0 Professional  
+**アーキテクチャ**: KyoshinEewViewerIngen準拠 Component-based Design  
+**技術仕様**: プロフェッショナルレベル実装完了

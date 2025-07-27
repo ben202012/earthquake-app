@@ -25,8 +25,9 @@ class EarthquakeMap {
                 attributionControl: true
             });
 
-            L.tileLayer(CONFIG.MAP.TILE_LAYER_URL, {
-                attribution: CONFIG.MAP.TILE_LAYER_ATTRIBUTION,
+            // ダークテーマのタイルレイヤーを使用
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://carto.com/">CARTO</a>',
                 maxZoom: 18,
                 minZoom: 4
             }).addTo(this.map);
@@ -342,11 +343,180 @@ class EarthquakeMap {
         return prefectureCoordinates[pref] || null;
     }
 
+    // フルスクリーンモードへの切り替え
+    enterFullscreenMode(earthquakeData) {
+        // メインアプリを非表示
+        document.querySelector('.app-header').style.display = 'none';
+        document.querySelector('.app-main').style.display = 'none';
+        
+        // フルスクリーンマップコンテナを作成
+        const fullscreenContainer = document.createElement('div');
+        fullscreenContainer.className = 'fullscreen-earthquake-map';
+        fullscreenContainer.innerHTML = `
+            <div class="earthquake-map-container">
+                <div id="fullscreen-map"></div>
+                
+                <!-- 震源位置情報カード -->
+                <div class="earthquake-info-card">
+                    <h3>震源の位置</h3>
+                    <div class="info-item">北緯 ${earthquakeData.latitude || '?'}°</div>
+                    <div class="info-item">東経 ${earthquakeData.longitude || '?'}°</div>
+                    <div class="info-item">深さ ${earthquakeData.depth || '?'} km</div>
+                </div>
+                
+                <!-- 追加情報カード -->
+                <div class="additional-info-card">
+                    <h3>追加情報</h3>
+                    <div class="info-text">${earthquakeData.tsunami ? 'この地震による津波の心配はありません。' : 'この地震による津波の心配はありません。'}</div>
+                </div>
+                
+                <!-- ブランディング -->
+                <div class="quake-branding">
+                    <div class="title">JISIN.ONE</div>
+                    <div class="subtitle">${new Date().toLocaleDateString('ja-JP', {month: 'numeric', day: 'numeric'})} ${new Date().toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})}頃の地震</div>
+                </div>
+                
+                <!-- 戻るボタン -->
+                <button class="back-to-main" onclick="window.earthquakeMap.exitFullscreenMode()">メインに戻る</button>
+                
+                <!-- 地震詳細情報バー -->
+                <div class="earthquake-details-bar">
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">発生日時</div>
+                            <div class="detail-value large">${new Date(earthquakeData.time).toLocaleDateString('ja-JP', {year: 'numeric', month: '2-digit', day: '2-digit'})} ${new Date(earthquakeData.time).toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})}頃</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">最大震度</div>
+                            <div class="detail-value large">${earthquakeData.maxIntensity || '?'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">マグニチュード</div>
+                            <div class="detail-value large">${earthquakeData.magnitude || '?'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">震源地</div>
+                            <div class="detail-value">${earthquakeData.location || '不明'}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(fullscreenContainer);
+        document.body.classList.add('fullscreen-map');
+        
+        // フルスクリーンマップを初期化
+        setTimeout(() => {
+            this.fullscreenMap = L.map('fullscreen-map', {
+                center: [earthquakeData.latitude || 35.6762, earthquakeData.longitude || 139.6503],
+                zoom: 8,
+                zoomControl: true,
+                attributionControl: false
+            });
+            
+            // ダークテーマを使用
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© CARTO',
+                maxZoom: 18,
+                minZoom: 4
+            }).addTo(this.fullscreenMap);
+            
+            // 震源地マーカーを追加（赤いX）
+            this.addEpicenterMarkerFullscreen(earthquakeData);
+            
+            // 震度マーカーを追加
+            this.addIntensityMarkersFullscreen(earthquakeData);
+        }, 100);
+    }
+    
+    // フルスクリーンモードを終了
+    exitFullscreenMode() {
+        const fullscreenContainer = document.querySelector('.fullscreen-earthquake-map');
+        if (fullscreenContainer) {
+            fullscreenContainer.remove();
+        }
+        
+        document.body.classList.remove('fullscreen-map');
+        document.querySelector('.app-header').style.display = 'flex';
+        document.querySelector('.app-main').style.display = 'flex';
+        
+        if (this.fullscreenMap) {
+            this.fullscreenMap.remove();
+            this.fullscreenMap = null;
+        }
+    }
+    
+    // フルスクリーンモード用震源地マーカー（赤いX）
+    addEpicenterMarkerFullscreen(earthquakeData) {
+        if (!earthquakeData.latitude || !earthquakeData.longitude) return;
+        
+        const epicenterIcon = L.divIcon({
+            className: 'epicenter-marker-fullscreen',
+            html: `<div style="
+                width: 32px;
+                height: 32px;
+                color: #ff4444;
+                font-size: 28px;
+                font-weight: bold;
+                text-align: center;
+                line-height: 32px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            ">×</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+        
+        L.marker([earthquakeData.latitude, earthquakeData.longitude], { icon: epicenterIcon })
+            .addTo(this.fullscreenMap);
+    }
+    
+    // フルスクリーンモード用震度マーカー
+    addIntensityMarkersFullscreen(earthquakeData) {
+        if (earthquakeData.points && Array.isArray(earthquakeData.points)) {
+            earthquakeData.points.forEach(point => {
+                const lat = point.lat || this.getCoordinatesByName(point.pref, point.addr)?.lat;
+                const lng = point.lng || this.getCoordinatesByName(point.pref, point.addr)?.lng;
+                
+                if (!lat || !lng) return;
+                
+                const intensity = CONFIG.INTENSITY_SCALE_MAP[point.scale] || point.scale;
+                
+                const intensityIcon = L.divIcon({
+                    className: 'intensity-marker-fullscreen',
+                    html: `<div style="
+                        width: 24px;
+                        height: 24px;
+                        background-color: #4a9eff;
+                        color: white;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 14px;
+                        border: 2px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+                    ">${intensity}</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                L.marker([lat, lng], { icon: intensityIcon })
+                    .addTo(this.fullscreenMap);
+            });
+        }
+    }
+
     destroy() {
         if (this.map) {
             this.clearMarkers();
             this.map.remove();
             this.map = null;
+        }
+        if (this.fullscreenMap) {
+            this.fullscreenMap.remove();
+            this.fullscreenMap = null;
         }
     }
 }

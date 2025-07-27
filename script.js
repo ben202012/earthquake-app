@@ -496,6 +496,43 @@ class EarthquakeApp {
         }
     }
 
+    // フルスクリーンマップ表示機能
+    showFullscreenMap() {
+        // 最新の地震データを取得
+        let latestEarthquake = null;
+        
+        if (this.earthquakeHistory.length > 0) {
+            latestEarthquake = this.earthquakeHistory[0];
+        } else {
+            // デフォルトデータ（トカラ列島近海）
+            latestEarthquake = {
+                time: new Date(),
+                location: 'トカラ列島近海',
+                magnitude: 2.6,
+                maxIntensity: '1',
+                depth: 10,
+                latitude: 29.4,
+                longitude: 129.5,
+                tsunami: false,
+                points: [
+                    {
+                        pref: '鹿児島県',
+                        addr: '鹿児島十島村悪石島',
+                        scale: 10, // 震度1
+                        lat: 29.4,
+                        lng: 129.5
+                    }
+                ]
+            };
+        }
+        
+        if (this.map && latestEarthquake) {
+            this.map.enterFullscreenMode(latestEarthquake);
+        } else {
+            this.showError('地震データが利用できません');
+        }
+    }
+
     resetSettings() {
         if (confirm('設定をリセットしますか？')) {
             this.settings = { ...CONFIG.DEFAULT_SETTINGS };

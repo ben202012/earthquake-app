@@ -1,27 +1,50 @@
-# 地震速報アプリ 要件定義書
+# 🌏 地震監視システム v2.0 - Professional Requirements Specification
 
 ## 1. プロジェクト概要
 
 ### 1.1 目的
-PC向けWeb地震速報アプリケーション。ブラウザが開いている間、リアルタイムで地震情報を監視・表示する。
+**プロフェッショナルレベル**のPC向けWeb地震監視システム。QUAKE.ONE風の統合ダッシュボードで24時間365日の地震活動を監視・表示する。
 
-### 1.2 背景
-- 地震の早期情報取得による安全確保
-- P2P地震情報と気象庁情報の両方を活用した迅速かつ正確な情報提供
-- PC作業中の地震情報リアルタイム監視
+### 1.2 背景・ビジョン
+- **地震防災の高度化**: 早期情報取得による安全確保の強化
+- **プロフェッショナル対応**: 専門機関レベルの監視システム構築  
+- **統合情報プラットフォーム**: P2P地震情報を活用した一元的情報提供
+- **24時間監視体制**: PC作業中の継続的地震活動監視
+- **QUAKE.ONE準拠**: 業界標準レベルのユーザーエクスペリエンス
+
+### 1.3 v2.0 Professional Vision
+- **KyoshinEewViewerIngen準拠**: 業界標準アーキテクチャパターンの採用
+- **Component-based Design**: スケーラブルなモジュール化設計
+- **Real-time Performance**: リアルタイムパフォーマンス監視・最適化
+- **Professional UI/UX**: ダークテーマによる視認性の高い専門インターフェース
 
 ## 2. 機能要件
 
-### 2.1 基本機能
-- **リアルタイム地震情報表示**: P2P地震情報（速報）の即座表示
-- **地震履歴情報表示**: P2P地震情報API履歴による詳細表示（直近10件）
-- **モーダル詳細表示**: JMA情報カードクリック時の詳細情報表示
-- **緊急地震速報ステータス**: EEW発信状況のリアルタイム監視
-- **活動状況ダッシュボード**: 日本列島全体の地震活動統計表示
-- **強震モニタ固定パネル**: 右上固定位置での強震モニタ表示（iframe）
-- **上下分割レイアウト**: 両情報の同時表示
-- **通知機能**: ブラウザ通知、音声アラート（800Hz警告音）、視覚的警告
-- **設定管理機能**: 閾値設定、音量調整、通知テスト機能
+### 2.1 Core Professional Features v2.0
+
+#### 2.1.1 Professional Dashboard
+- **統合ダッシュボード**: Grid-based レスポンシブレイアウト
+- **ダークテーマUI**: 専門機関向けの視認性の高いインターフェース
+- **リアルタイム監視**: 24時間365日対応の継続監視システム
+- **QUAKE.ONE風デザイン**: 業界標準レベルのユーザーエクスペリエンス
+
+#### 2.1.2 Advanced Monitoring System
+- **P2Pリアルタイム情報**: WebSocket接続による即座の地震情報表示
+- **地震履歴管理**: P2P API履歴による詳細表示（拡張可能）
+- **緊急地震速報監視**: EEW発信状況のリアルタイム追跡
+- **活動統計ダッシュボード**: 日本列島全体の地震活動統計・メトリクス表示
+- **インタラクティブ地図**: Leaflet.js + ダークテーマによる震源地可視化
+
+#### 2.1.3 Professional Alert System
+- **マルチレベル通知**: ブラウザ通知・音声アラート・視覚的警告の統合
+- **カスタマイズ設定**: 震度・マグニチュード閾値による詳細制御
+- **接続状態監視**: リアルタイム接続ステータス・パフォーマンス表示
+
+#### 2.1.4 Component Architecture Features
+- **モジュール化設計**: EventBus + BaseComponent によるスケーラブル構成
+- **パフォーマンス監視**: メモリ使用量・レスポンス時間・稼働時間の可視化
+- **エラーハンドリング**: 包括的エラー処理・自動復旧システム
+- **データ永続化**: LocalStorage活用の設定・履歴管理
 
 ### 2.2 表示情報詳細
 - **基本情報**: 震度、マグニチュード、震源地、発生時刻、津波情報
@@ -176,32 +199,61 @@ PC向けWeb地震速報アプリケーション。ブラウザが開いている
 - モバイル版開発
 - デスクトップアプリ化
 
-## 9. 運用要件
+## 9. Professional System Requirements v2.0
 
-### 9.1 PC起動方法
-1. **ローカル開発環境**
-   ```bash
-   cd "/path/to/Jisin -App"
-   python3 -m http.server 8080
-   ```
-   - ブラウザで `http://localhost:8080/` にアクセス
+### 9.1 Architecture Requirements
+#### 9.1.1 Core Architecture (必須)
+```
+src/core/
+├── EventBus.js         # 中央イベント管理システム
+├── BaseComponent.js    # コンポーネント基底クラス  
+└── App.js             # メインアプリケーション
 
-2. **静的ホスティング**
-   - GitHub Pages、Netlify、Vercelなど
-   - ファイルをそのままアップロード
+src/components/panels/
+└── P2PPanel.js        # P2P地震情報パネル
 
-### 9.2 PC終了方法
-```bash
-# HTTPサーバープロセスの確認
-ps aux | grep "python3 -m http.server"
+src/models/
+└── Earthquake.js      # 地震データモデル・バリデーション
 
-# プロセス終了
-kill [PID]
-# または Ctrl+C で終了
+src/styles/
+└── components.css     # プロフェッショナルコンポーネントスタイル
 ```
 
-### 9.3 必要システム要件
-- **OS**: Windows 10/11, macOS 10.15+, Linux
-- **ブラウザ**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **Python**: 3.6+ (ローカル起動時のみ)
-- **ネットワーク**: インターネット接続必須
+#### 9.1.2 Professional Files
+- **index.html**: Professional Dashboard (メインアプリ)
+- **index-new.html**: Modular Architecture Version
+- **Legacy Files**: v1.0互換性保持（test.html, script.js等）
+
+### 9.2 Performance Requirements
+- **初期化時間**: 3秒以内のアプリケーション起動
+- **メモリ使用量**: 100MB以下の効率的運用
+- **WebSocket接続**: 99%以上の接続安定性
+- **リアルタイム応答**: 15秒以内の地震情報表示
+- **パフォーマンス監視**: リアルタイムメトリクス表示
+
+### 9.3 Professional Deployment
+#### 9.3.1 Development Environment
+```bash
+cd "/Users/matsuo/Desktop/Python App/Jisin -App"
+python3 -m http.server 8080
+# Access: http://localhost:8080/
+```
+
+#### 9.3.2 Production Environment  
+- **Static Hosting**: GitHub Pages, Netlify, Vercel対応
+- **CDN Integration**: Leaflet.js等外部ライブラリの効率配信
+- **HTTPS Required**: セキュア接続による安全運用
+
+### 9.4 System Requirements  
+- **OS**: Windows 10/11, macOS 10.15+, Linux (64-bit)
+- **Browser**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+ 
+- **Memory**: 4GB RAM以上推奨
+- **Network**: 高速インターネット接続必須 (1Mbps以上)
+- **Screen**: 1920x1080以上の解像度推奨（Grid Layout最適化）
+
+---
+
+**最終更新**: 2025年7月26日  
+**バージョン**: 2.0.0 Professional  
+**アーキテクチャ**: KyoshinEewViewerIngen準拠 Component-based Design  
+**要件仕様**: プロフェッショナルレベル実装完了
