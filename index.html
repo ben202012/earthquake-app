@@ -1504,6 +1504,7 @@
     <!-- 60%実用機能達成のための高度システム -->
     <script src="tsunami-prediction-engine.js"></script>
     <script src="multi-site-verification.js"></script>
+    <script src="historical-tsunami-data.js"></script>
     <script>
         // プロフェッショナル地震監視システム
         class ProfessionalEarthquakeMonitor {
@@ -3339,8 +3340,14 @@
                     // データストレージシステム
                     this.tsunamiDataStore = new TsunamiDataStore();
                     
+                    // 過去津波データシステム
+                    this.historicalTsunamiData = new HistoricalTsunamiData();
+                    
                     // 警報システム
                     this.tsunamiAlertSystem = new TsunamiAlertSystem();
+                    
+                    // 過去データの初期投入
+                    this.loadHistoricalTsunamiData();
                     
                     // システム間連携設定
                     this.setupAdvancedSystemConnections();
@@ -3350,6 +3357,91 @@
                 } catch (error) {
                     console.error('❌ 高度システム初期化失敗:', error);
                 }
+            }
+            
+            /**
+             * 過去津波データ投入 (実用性向上)
+             */
+            async loadHistoricalTsunamiData() {
+                console.log('📚 貴重な過去津波データの投入開始');
+                
+                try {
+                    // 既存データ確認
+                    const currentStats = this.tsunamiDataStore.getStatistics();
+                    
+                    if (currentStats.historyCount === 0) {
+                        console.log('💾 初回起動検出 - 過去津波データを投入します');
+                        
+                        // 過去データ投入
+                        const loadedCount = await this.historicalTsunamiData.loadHistoricalDataToStore(this.tsunamiDataStore);
+                        
+                        const stats = this.historicalTsunamiData.getHistoricalDataStats();
+                        
+                        console.log('📊 過去津波データ投入完了:');
+                        console.log(`   💿 投入データ数: ${loadedCount}件`);
+                        console.log(`   📅 期間: ${stats.timeSpan.oldest?.split('T')[0]} 〜 ${stats.timeSpan.newest?.split('T')[0]}`);
+                        console.log(`   🚨 大津波警報: ${stats.byLevel.major_warning}件`);
+                        console.log(`   ⚠️ 津波警報: ${stats.byLevel.warning}件`);
+                        console.log(`   📢 津波注意報: ${stats.byLevel.advisory}件`);
+                        
+                        // UI に結果表示
+                        this.showHistoricalDataLoadedMessage(loadedCount);
+                        
+                    } else {
+                        console.log(`📋 既存データ検出: ${currentStats.historyCount}件の履歴があります`);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ 過去津波データ投入失敗:', error);
+                }
+            }
+            
+            /**
+             * 過去データ投入完了メッセージ表示
+             */
+            showHistoricalDataLoadedMessage(loadedCount) {
+                const messageElement = document.createElement('div');
+                messageElement.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    width: 300px;
+                    background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+                    color: white;
+                    padding: 15px;
+                    border-radius: 10px;
+                    z-index: 9999;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+                    font-family: Arial, sans-serif;
+                `;
+                
+                messageElement.innerHTML = `
+                    <h3 style="margin: 0 0 10px 0; font-size: 16px;">📚 過去津波データ投入完了</h3>
+                    <div style="font-size: 14px; line-height: 1.4;">
+                        <div>🎯 貴重なデータ: <strong>${loadedCount}件</strong></div>
+                        <div>📅 2010年〜2024年の津波実績</div>
+                        <div>💡 東日本大震災・能登半島地震等</div>
+                    </div>
+                    <button onclick="this.parentElement.remove()" style="
+                        background: white;
+                        color: #4a9eff;
+                        border: none;
+                        padding: 5px 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        margin-top: 10px;
+                        font-size: 12px;
+                    ">確認</button>
+                `;
+                
+                document.body.appendChild(messageElement);
+                
+                // 15秒後に自動削除
+                setTimeout(() => {
+                    if (document.body.contains(messageElement)) {
+                        document.body.removeChild(messageElement);
+                    }
+                }, 15000);
             }
             
             /**
