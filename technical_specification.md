@@ -133,8 +133,10 @@ ARCHITECTURE_REDESIGN.md   # Architecture Design Document
   - **🔴 最新地震情報セクション**: スクロール可能な地震履歴リスト
 
 - **メインコンテンツエリア (中央)**:
-  - **🗺️ インタラクティブ地図**: Leaflet.js + ダークテーマ
+  - **🗺️ インタラクティブ地図**: Leaflet.js + 明度調整対応
   - **📍 震源位置情報オーバーレイ**: 北緯・東経・深さ・マグニチュード表示
+  - **🏙️ 日本列島位置表示**: 主要11都市マーカー（レイヤー適応色）
+  - **🔆 明度調整システム**: リアルタイムCSSフィルター（50-200%）
 
 - **右パネル (幅400px)**:
   - **📡 リアルタイム監視ヘッダー**: "LIVE" インジケーター
@@ -580,8 +582,8 @@ const settingsPanel = {
             initialState: 'collapsed'
         },
         {
-            id: 'map-layers', 
-            title: '🗺️ 地図設定',
+            id: 'brightness-settings', 
+            title: '🔆 表示調整',
             collapsible: true,
             initialState: 'collapsed'
         },
@@ -595,7 +597,28 @@ const settingsPanel = {
 };
 ```
 
-#### 12.1.2 通知設定の詳細仕様
+#### 12.1.2 設定システムの詳細仕様
+
+##### 表示調整設定
+```javascript
+// 明度調整設定
+const brightnessSettings = {
+    mapBrightness: 100,         // 50-200% (スライダー、10%刻み)
+    autoNightMode: true,        // 18時-6時自動適用
+    nightModeBrightness: 70,    // 夜間モード明度
+    standardBrightness: 100     // 標準表示明度
+};
+
+// 明度調整UI コンポーネント
+const brightnessComponents = {
+    rangeSlider: 'mapBrightness (50-200%)',
+    presetButtons: ['暗め(70%)', '標準(100%)', '明るめ(140%)'],
+    headerToggle: '🌙夜間モード / ☀️標準表示',
+    autoSave: 'localStorage連携'
+};
+```
+
+##### 通知設定
 ```javascript
 // デフォルト設定値
 const defaultSettings = {
@@ -657,6 +680,85 @@ testSound() {
     // 音量設定に基づく再生
     gainNode.gain.linearRampToValueAtTime(this.settings.volume / 100 * 0.3);
 }
+```
+
+### 12.3 地図表示・明度調整システム
+
+#### 12.3.1 日本列島位置表示
+```javascript
+// 主要都市マーカーデータ
+const japanCityMarkers = [
+    { name: '札幌', coords: [43.064, 141.347], region: '北海道' },
+    { name: '青森', coords: [40.824, 140.740], region: '東北' },
+    { name: '仙台', coords: [38.268, 140.872], region: '東北' },
+    { name: '東京', coords: [35.676, 139.650], region: '関東' },
+    { name: '新潟', coords: [37.902, 139.023], region: '中部' },
+    { name: '名古屋', coords: [35.011, 136.768], region: '中部' },
+    { name: '大阪', coords: [34.693, 135.502], region: '関西' },
+    { name: '広島', coords: [34.396, 132.459], region: '中国' },
+    { name: '高松', coords: [34.340, 134.043], region: '四国' },
+    { name: '福岡', coords: [33.584, 130.401], region: '九州' },
+    { name: '鹿児島', coords: [31.560, 130.558], region: '九州' }
+];
+
+// レイヤー別マーカースタイル
+const getJapanMarkerStyle = (layerName) => {
+    const styles = {
+        'ダーク（控えめ）': { radius: 3, fillColor: '#dddddd', color: '#ffffff' },
+        'グレー（中間調）': { radius: 3, fillColor: '#666666', color: '#333333' },
+        'ライト（明るめ）': { radius: 3, fillColor: '#333333', color: '#000000' },
+        '標準マップ': { radius: 3, fillColor: '#666666', color: '#333333' }
+    };
+    return styles[layerName] || styles['標準マップ'];
+};
+```
+
+#### 12.3.2 明度調整システム
+```javascript
+// 明度調整機能
+class MapBrightnessController {
+    constructor() {
+        this.mapBrightness = 100; // デフォルト100%
+        this.nightModeEnabled = false;
+        this.initializeBrightnessSettings();
+    }
+    
+    // 明度適用
+    applyMapBrightness() {
+        const mapContainer = document.querySelector('.leaflet-container');
+        if (mapContainer && this.mapBrightness) {
+            const brightness = this.mapBrightness / 100;
+            mapContainer.style.filter = `brightness(${brightness})`;
+        }
+    }
+    
+    // 夜間モード統合
+    enableNightMode(enabled) {
+        const brightness = enabled ? 70 : 100; // 夜間70%, 標準100%
+        this.updateMapBrightness(brightness);
+        this.nightModeEnabled = enabled;
+    }
+    
+    // 自動夜間モード（18-6時）
+    setupAutoNightMode() {
+        const now = new Date();
+        const hour = now.getHours();
+        const isNightTime = hour >= 18 || hour < 6;
+        this.enableNightMode(isNightTime);
+    }
+}
+```
+
+#### 12.3.3 UI連携システム
+```javascript
+// ヘッダーボタンと設定パネルの連携
+const brightnessUISync = {
+    headerButton: '🌙夜間モード / ☀️標準表示',
+    settingsSlider: 'map-brightness-slider (50-200%)',
+    presetButtons: ['暗め(70%)', '標準(100%)', '明るめ(140%)'],
+    autoSave: 'localStorage.mapBrightness',
+    realTimeSync: 'updateMapBrightness() → UI更新'
+};
 ```
 
 ## 13. 実装完了機能一覧 (80%達成)

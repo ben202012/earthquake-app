@@ -4,6 +4,27 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
+// セキュリティ設定の読み込み
+let SECURITY_CONFIG;
+try {
+    SECURITY_CONFIG = require('./security-config.js');
+    console.log('✅ セキュリティ設定ファイルを読み込みました');
+} catch (error) {
+    console.warn('⚠️ セキュリティ設定ファイルが見つかりません。デフォルト設定を使用します。');
+    // デフォルトのセキュリティ設定
+    SECURITY_CONFIG = {
+        cors: {
+            allowedOrigins: ['http://localhost:8080'],
+            allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization'],
+            allowCredentials: false
+        },
+        proxy: {
+            allowedHosts: ['earthquake.usgs.gov', 'www.jma.go.jp']
+        }
+    };
+}
+
 const port = 8080;
 
 const mimeTypes = {
@@ -26,17 +47,147 @@ const externalAPIs = {
     'noaa': 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson'
 };
 
-// プロキシ関数（リダイレクト対応版）
+// 気象庁XML API設定（JMAXMLClient用のカスタムエンドポイント）
+const jmaXmlAPIs = {
+    'tsunami': 'https://xml.kishou.go.jp/data/tsunami/',
+    'forecast': 'https://xml.kishou.go.jp/forecast/tsunami/',
+    'historical': 'https://xml.kishou.go.jp/historicaldata/'
+};
+
+/**
+ * 安全なCORSヘッダーを設定する関数
+ */
+function setSafeCORSHeaders(req, res) {
+    const origin = req.headers.origin;
+    const allowedOrigins = SECURITY_CONFIG.cors.allowedOrigins;
+    
+    // オリジンが許可リストに含まれている場合のみ設定
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.setHeader('Access-Control-Allow-Methods', SECURITY_CONFIG.cors.allowedMethods.join(', '));
+    res.setHeader('Access-Control-Allow-Headers', SECURITY_CONFIG.cors.allowedHeaders.join(', '));
+    
+    if (SECURITY_CONFIG.cors.allowCredentials) {
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+}
+
+/**
+ * 安全なエラーレスポンスを生成する関数
+ * 本番環境では詳細情報を隠蔽し、開発環境では詳細を表示
+ */
+function createSafeErrorResponse(error, context = {}) {
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const includeDetails = SECURITY_CONFIG.logging.includeErrorDetails || isDevelopment;
+    
+    // ベースエラー情報
+    const baseError = {
+        error: 'サーバーエラーが発生しました',
+        timestamp: new Date().toISOString(),
+        requestId: context.requestId || Math.random().toString(36).substr(2, 9)
+    };
+    
+    // 開発環境または設定で許可されている場合のみ詳細情報を含める
+    if (includeDetails) {
+        baseError.details = {
+            message: error.message,
+            type: error.name || 'Error',
+            ...(context.url && { url: context.url }),
+            ...(context.method && { method: context.method })
+        };
+        
+        // スタックトレースは開発環境のみ
+        if (isDevelopment && error.stack) {
+            baseError.details.stack = error.stack;
+        }
+    }
+    
+    // セキュリティログ記録
+    if (SECURITY_CONFIG.logging.logAccess) {
+        console.warn(`🚨 エラー発生 [${baseError.requestId}]:`, error.message);
+    }
+    
+    return baseError;
+}
+
+/**
+ * セキュリティヘッダーを設定する関数
+ * XSS、クリックジャッキング、MIMEタイプ偽装等を防御
+ */
+function setSecurityHeaders(req, res) {
+    // Content Security Policy (CSP) - XSS攻撃を防ぐ
+    const cspDirectives = SECURITY_CONFIG.headers.contentSecurityPolicy.directives;
+    const cspString = Object.entries(cspDirectives)
+        .map(([directive, sources]) => {
+            const directiveName = directive.replace(/([A-Z])/g, '-$1').toLowerCase();
+            return `${directiveName} ${sources.join(' ')}`;
+        })
+        .join('; ');
+    
+    res.setHeader('Content-Security-Policy', cspString);
+    
+    // X-Frame-Options - クリックジャッキング攻撃を防ぐ
+    res.setHeader('X-Frame-Options', SECURITY_CONFIG.headers.xFrameOptions);
+    
+    // X-XSS-Protection - ブラウザ内蔵のXSS保護を有効化
+    res.setHeader('X-XSS-Protection', SECURITY_CONFIG.headers.xXSSProtection);
+    
+    // X-Content-Type-Options - MIMEタイプ偽装攻撃を防ぐ
+    res.setHeader('X-Content-Type-Options', SECURITY_CONFIG.headers.xContentTypeOptions);
+    
+    // Referrer-Policy - リファラー情報の制御
+    res.setHeader('Referrer-Policy', SECURITY_CONFIG.headers.referrerPolicy);
+    
+    // HTTPS接続の場合のみHSTSヘッダーを設定
+    if (req.connection.encrypted || req.headers['x-forwarded-proto'] === 'https') {
+        const hsts = SECURITY_CONFIG.headers.strictTransportSecurity;
+        let hstsValue = `max-age=${hsts.maxAge}`;
+        if (hsts.includeSubDomains) hstsValue += '; includeSubDomains';
+        if (hsts.preload) hstsValue += '; preload';
+        
+        res.setHeader('Strict-Transport-Security', hstsValue);
+    }
+}
+
+/**
+ * URLのホストが許可されているかチェックする関数
+ */
+function isAllowedHost(targetUrl) {
+    try {
+        const parsedUrl = new URL(targetUrl);
+        return SECURITY_CONFIG.proxy.allowedHosts.includes(parsedUrl.hostname);
+    } catch (error) {
+        console.error('❌ URL解析エラー:', error);
+        return false;
+    }
+}
+
+// プロキシ関数（リダイレクト対応版・セキュリティ強化版）
 function proxyRequest(targetUrl, req, res, redirectCount = 0) {
-    const maxRedirects = 5;
+    const maxRedirects = SECURITY_CONFIG.proxy.maxRedirects || 5;
+    
+    // ホストの許可チェック
+    if (!isAllowedHost(targetUrl)) {
+        console.error(`❌ 許可されていないホストへのアクセス: ${targetUrl}`);
+        const safeError = createSafeErrorResponse(
+            new Error('アクセス権限がありません'),
+            { url: targetUrl, method: req.method }
+        );
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(safeError));
+        return;
+    }
     
     if (redirectCount > maxRedirects) {
         console.error(`❌ 最大リダイレクト数を超過: ${targetUrl}`);
+        const safeError = createSafeErrorResponse(
+            new Error('リダイレクト回数が上限を超過しました'),
+            { url: targetUrl, method: req.method }
+        );
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-            error: 'Too many redirects', 
-            url: targetUrl 
-        }));
+        res.end(JSON.stringify(safeError));
         return;
     }
     
@@ -63,10 +214,10 @@ function proxyRequest(targetUrl, req, res, redirectCount = 0) {
             }
         }
         
-        // CORS ヘッダーを追加
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        // 安全なCORSヘッダーを設定
+        setSafeCORSHeaders(req, res);
+        // セキュリティヘッダーを設定
+        setSecurityHeaders(req, res);
         res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'application/json');
         
         // データを一度だけ読み込み
@@ -86,11 +237,12 @@ function proxyRequest(targetUrl, req, res, redirectCount = 0) {
         proxyRes.on('error', (err) => {
             console.error(`❌ レスポンス読み込みエラー: ${err.message}`);
             if (!res.headersSent) {
+                const safeError = createSafeErrorResponse(
+                    err,
+                    { url: targetUrl, method: req.method }
+                );
                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ 
-                    error: 'Response read error', 
-                    message: err.message 
-                }));
+                res.end(JSON.stringify(safeError));
             }
         });
     });
@@ -98,12 +250,12 @@ function proxyRequest(targetUrl, req, res, redirectCount = 0) {
     proxyReq.on('error', (err) => {
         console.error(`❌ プロキシエラー: ${err.message} - ${targetUrl}`);
         if (!res.headersSent) {
+            const safeError = createSafeErrorResponse(
+                err,
+                { url: targetUrl, method: req.method }
+            );
             res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ 
-                error: 'Proxy request failed', 
-                message: err.message,
-                url: targetUrl 
-            }));
+            res.end(JSON.stringify(safeError));
         }
     });
     
@@ -111,11 +263,12 @@ function proxyRequest(targetUrl, req, res, redirectCount = 0) {
         console.error(`❌ プロキシタイムアウト: ${targetUrl}`);
         proxyReq.destroy();
         if (!res.headersSent) {
+            const safeError = createSafeErrorResponse(
+                new Error('リクエストがタイムアウトしました'),
+                { url: targetUrl, method: req.method }
+            );
             res.writeHead(504, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ 
-                error: 'Proxy timeout', 
-                url: targetUrl 
-            }));
+            res.end(JSON.stringify(safeError));
         }
     });
     
@@ -126,10 +279,10 @@ const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     let pathname = parsedUrl.pathname;
     
-    // CORS headers for all responses
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // 安全なCORSヘッダーを設定
+    setSafeCORSHeaders(req, res);
+    // セキュリティヘッダーを設定
+    setSecurityHeaders(req, res);
     
     if (req.method === 'OPTIONS') {
         res.writeHead(200);
@@ -141,14 +294,44 @@ const server = http.createServer((req, res) => {
     if (pathname.startsWith('/api/proxy/')) {
         const apiId = pathname.replace('/api/proxy/', '');
         
+        // 一般的な外部API
         if (externalAPIs[apiId]) {
             proxyRequest(externalAPIs[apiId], req, res);
             return;
-        } else {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'API endpoint not found', apiId }));
-            return;
         }
+        
+        // JMAXMLClient専用のセキュアプロキシ
+        if (apiId === 'jma' && parsedUrl.query.url) {
+            const targetUrl = decodeURIComponent(parsedUrl.query.url);
+            
+            // JMA XMLエンドポイントのみ許可（セキュリティ強化）
+            const isJmaXmlUrl = Object.values(jmaXmlAPIs).some(baseUrl => 
+                targetUrl.startsWith(baseUrl)
+            );
+            
+            if (isJmaXmlUrl) {
+                console.log(`🔄 JMA XML セキュアプロキシ: ${targetUrl}`);
+                proxyRequest(targetUrl, req, res);
+                return;
+            } else {
+                const safeError = createSafeErrorResponse(
+                    new Error('許可されていないJMA URLです'),
+                    { method: req.method, url: targetUrl }
+                );
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(safeError));
+                return;
+            }
+        }
+        
+        // 該当するAPIが見つからない場合
+        const safeError = createSafeErrorResponse(
+            new Error('APIエンドポイントが見つかりません'),
+            { method: req.method, endpoint: apiId }
+        );
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(safeError));
+        return;
     }
     
     // カスタムAPIエンドポイント
@@ -177,13 +360,25 @@ const server = http.createServer((req, res) => {
         if (err) {
             if (err.code === 'ENOENT') {
                 res.writeHead(404, { 'Content-Type': 'text/html' });
-                res.end('<h1>404 - File Not Found</h1>');
+                res.end('<h1>404 - ファイルが見つかりません</h1>');
             } else {
+                // ファイル読み込みエラーの詳細をログに記録（本番では非表示）
+                const safeError = createSafeErrorResponse(
+                    err,
+                    { file: filePath, method: req.method }
+                );
+                console.error('ファイル読み込みエラー:', safeError);
+                
                 res.writeHead(500, { 'Content-Type': 'text/html' });
-                res.end('<h1>500 - Internal Server Error</h1>');
+                res.end('<h1>500 - サーバーエラー</h1>');
             }
         } else {
-            res.writeHead(200, { 'Content-Type': mimeType });
+            // 静的ファイル配信時もセキュリティヘッダーを設定
+            res.writeHead(200, { 
+                'Content-Type': mimeType,
+                // 追加のセキュリティヘッダー（既に設定済みだが念のため）
+                'X-Content-Type-Options': 'nosniff'
+            });
             res.end(data);
         }
     });

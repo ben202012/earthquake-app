@@ -1106,9 +1106,51 @@
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
         }
         
-        /* ナイトモードレイヤーのスタイル */
-        .night-mode-layer {
-            filter: brightness(0.7) contrast(1.2) saturate(0.8);
+
+        
+        .standard-map-layer {
+            transition: filter 0.5s ease;
+        }
+        
+        .dark-subtle {
+            opacity: 0.95;
+        }
+        
+        /* 地震マーカーの基本スタイル */
+        .earthquake-marker {
+            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
+        }
+        
+        /* 津波エリアの標準表示 */
+        .jma-tsunami-area {
+            stroke-width: 2px !important;
+            stroke-opacity: 0.8 !important;
+            fill-opacity: 0.6 !important;
+        }
+        
+        /* 日本都市マーカーの表示 */
+        .japan-city-marker {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        /* マーカーのホバー効果 */
+        .japan-city-marker:hover {
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6));
+        }
+        
+        /* 都市ツールチップのスタイル */
+        .japan-city-tooltip {
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #333333 !important;
+            border: 1px solid #cccccc !important;
+            border-radius: 4px !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            padding: 4px 8px !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
         
         /* レイヤーコントロールのスタイル改善 */
@@ -1532,6 +1574,9 @@
                     homeControl: null
                 };
                 
+                // 夜間モード状態
+                this.nightModeEnabled = false;
+                
                 // 実用津波監視システム (50%完成度版)
                 this.tsunamiManager = new TsunamiManager();
                 this.jmaXmlClient = new JMAXMLClient();
@@ -1673,12 +1718,19 @@
                     attributionControl: false
                 });
 
-                // 複数の地図レイヤーを定義（明度調整済み）
+                // 実用的な地図レイヤー設定
                 const mapLayers = {
-                    'ダーク（明るめ）': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+                    '標準マップ': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 18,
+                        minZoom: 4,
+                        className: 'standard-map-layer'
+                    }),
+                    'ダーク（控えめ）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
                         maxZoom: 18,
-                        minZoom: 4
+                        minZoom: 4,
+                        className: 'dark-subtle'
                     }),
                     'グレー（中間調）': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
@@ -1686,32 +1738,21 @@
                         minZoom: 4,
                         opacity: 0.8
                     }),
-                    'ダーク（標準）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                    'ライト（明るめ）': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
                         maxZoom: 18,
                         minZoom: 4
-                    }),
-                    'ダーク（ラベル付き）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                        attribution: '© CARTO',
-                        maxZoom: 18,
-                        minZoom: 4
-                    }),
-                    'ナイトモード': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                        attribution: '© CARTO (Night Mode)',
-                        maxZoom: 18,
-                        minZoom: 4,
-                        className: 'night-mode-layer'
                     })
                 };
 
-                // デフォルトレイヤー（明るめダーク）を設定
-                const defaultLayer = mapLayers['ダーク（明るめ）'];
+                // デフォルトレイヤー（標準マップ）を設定
+                const defaultLayer = mapLayers['標準マップ'];
                 defaultLayer.addTo(this.map);
 
                 // 地図レイヤーを保存（設定パネルで使用）
                 this.mapLayers = mapLayers;
                 this.currentLayer = defaultLayer;
-                this.currentLayerName = 'ダーク（明るめ）';
+                this.currentLayerName = '標準マップ';
                 
                 // イベントリスナーでレイヤー変更を監視
                 this.map.on('baselayerchange', (e) => {
@@ -1719,12 +1760,21 @@
                     console.log(`🗺️ Map layer changed to: "${e.name}"`);
                     this.addActivityFeedItem('🗺️', `地図レイヤーを${e.name}に変更しました`, new Date());
                     
+                    // レイヤー変更時に境界も強制更新
+                    setTimeout(() => {
+                        this.updateJapanBoundariesForLayer();
+                        console.log(`🔄 レイヤー変更後の境界更新完了: ${e.name}`);
+                    }, 500); // 500ms後に実行してレイヤー変更完了を待つ
+                    
                     // 設定パネルが開いている場合はUIを更新
                     const layersContainer = document.getElementById('settings-map-layers');
                     if (layersContainer && layersContainer.style.display !== 'none') {
                         this.updateMapLayerOptions();
                     }
                 });
+
+                // 夜間モード切り替え機能を準備
+                this.setupNightModeToggle();
 
                 // カスタムスタイル（日本列島を強調）
                 this.addJapanOverlay();
@@ -1737,57 +1787,300 @@
                 
                 // 地図移動イベントを監視
                 this.setupMapEventListeners();
+                
+                // 明度設定を初期化・適用
+                this.initializeBrightnessSettings();
 
                 console.log('🗺️ Map initialized with enhanced visibility for Japan');
             }
 
             addJapanOverlay() {
-                // 日本列島の境界線を強調するスタイル
-                const japanStyle = {
-                    color: '#4a9eff',
-                    weight: 2,
+                // 主要都市データ（控えめな表示用）
+                this.japanCityMarkers = [
+                    { name: '札幌', coords: [43.064, 141.347], region: '北海道' },
+                    { name: '青森', coords: [40.824, 140.740], region: '東北' },
+                    { name: '仙台', coords: [38.268, 140.872], region: '東北' },
+                    { name: '東京', coords: [35.676, 139.650], region: '関東' },
+                    { name: '新潟', coords: [37.902, 139.023], region: '中部' },
+                    { name: '名古屋', coords: [35.011, 136.768], region: '中部' },
+                    { name: '大阪', coords: [34.693, 135.502], region: '関西' },
+                    { name: '広島', coords: [34.396, 132.459], region: '中国' },
+                    { name: '高松', coords: [34.340, 134.043], region: '四国' },
+                    { name: '福岡', coords: [33.584, 130.401], region: '九州' },
+                    { name: '鹿児島', coords: [31.560, 130.558], region: '九州' }
+                ];
+
+                // 初期表示の日本列島目安を作成
+                this.applyLayerSpecificStyles(); // 初期化時もスタイル適用
+                this.createJapanBoundaries();
+
+                console.log('🗾 日本主要都市マーカーを表示');
+            }
+
+            // 日本列島マーカーの作成（主要都市表示）
+            createJapanBoundaries() {
+                // 既存の境界レイヤーを削除
+                if (this.japanBoundaryLayers) {
+                    this.japanBoundaryLayers.forEach(layer => {
+                        this.map.removeLayer(layer);
+                    });
+                }
+                this.japanBoundaryLayers = [];
+
+                // 現在のレイヤーに応じたマーカースタイルを取得
+                const markerStyle = this.getJapanMarkerStyle();
+
+                // カスタムpaneを作成（津波レイヤーより上に表示）
+                if (!this.map.getPane('japan-markers')) {
+                    const japanPane = this.map.createPane('japan-markers');
+                    japanPane.style.zIndex = 650; // 津波レイヤー(600)より上
+                }
+
+                // 主要都市マーカーを表示
+                if (this.japanCityMarkers) {
+                    this.japanCityMarkers.forEach(city => {
+                        const marker = L.circleMarker(city.coords, {
+                            ...markerStyle,
+                            className: 'japan-city-marker',
+                            pane: 'japan-markers'  // 専用paneに配置
+                        }).addTo(this.map);
+                        
+                        this.japanBoundaryLayers.push(marker);
+                        
+                        // ツールチップ追加
+                        marker.bindTooltip(`${city.name} (${city.region})`, {
+                            permanent: false,
+                            direction: 'top',
+                            className: 'japan-city-tooltip'
+                        });
+                        
+                        // デバッグ情報
+                        console.log(`✅ 都市マーカー作成: ${city.name} - 色:${markerStyle.fillColor}`);
+                    });
+                } else {
+                    console.warn('⚠️ 日本都市データが見つかりません');
+                }
+
+                console.log(`🗾 日本主要都市マーカー更新: ${this.currentLayerName || '標準'}レイヤー対応`);
+            }
+
+            // レイヤーに応じたマーカースタイルを取得
+            getJapanMarkerStyle() {
+                const layerName = this.currentLayerName || '標準マップ';
+                
+                // レイヤータイプに応じたマーカー設定
+                const markerStyles = {
+                    // ダーク系レイヤー：明るいマーカー
+                    'ダーク（控えめ）': {
+                        radius: 3,
+                        fillColor: '#dddddd',    // 明るいグレー
+                        color: '#ffffff',        // 白い枠線
+                        weight: 1,
                     opacity: 0.8,
-                    fillColor: 'transparent',
-                    fillOpacity: 0
+                        fillOpacity: 0.7
+                    },
+                    // グレー系レイヤー：中間色マーカー
+                    'グレー（中間調）': {
+                        radius: 3,
+                        fillColor: '#666666',    // 中間グレー
+                        color: '#333333',        // 暗い枠線
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.7
+                    },
+                    // ライト系レイヤー：暗いマーカー
+                    'ライト（明るめ）': {
+                        radius: 3,
+                        fillColor: '#333333',    // 暗いグレー
+                        color: '#000000',        // 黒い枠線
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.7
+                    },
+                    // 標準マップ：バランスの取れたマーカー
+                    '標準マップ': {
+                        radius: 3,
+                        fillColor: '#666666',    // 中間グレー
+                        color: '#333333',        // 暗めの枠線
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.6
+                    }
                 };
 
-                // 簡略化された日本列島の境界（主要4島）
-                const japanBounds = [
-                    // 本州おおよその境界
-                    [
-                        [35.7, 139.7], // 東京
-                        [34.7, 135.5], // 大阪
-                        [33.6, 130.4], // 福岡
-                        [38.3, 140.9], // 仙台
-                        [43.1, 141.3], // 札幌
-                        [35.7, 139.7]  // 戻り
-                    ]
-                ];
+                // 指定されたレイヤーのスタイルを返す、存在しない場合は標準を使用
+                return markerStyles[layerName] || markerStyles['標準マップ'];
+            }
 
-                // 日本列島の大まかなエリアを円で表示
-                const japanCircles = [
-                    { center: [35.676, 139.650], radius: 50000, name: '関東' },
-                    { center: [34.693, 135.502], radius: 40000, name: '関西' },
-                    { center: [35.011, 135.768], radius: 30000, name: '中部' },
-                    { center: [33.584, 130.401], radius: 35000, name: '九州' },
-                    { center: [43.064, 141.347], radius: 45000, name: '北海道' },
-                    { center: [38.268, 140.872], radius: 30000, name: '東北' }
-                ];
+            // 夜間モード切り替え機能のセットアップ
+            setupNightModeToggle() {
+                // 現在の時刻を取得
+                const now = new Date();
+                const hour = now.getHours();
+                
+                // 夜間時間帯を判定（18時〜6時）
+                const isNightTime = hour >= 18 || hour < 6;
+                
+                // 夜間時間帯の場合、自動的に暗めにする
+                if (isNightTime) {
+                    this.enableNightMode(true); // 自動適用
+                } else {
+                    this.enableNightMode(false);
+                }
+                
+                // ヘッダーに夜間モード切り替えボタンを追加
+                this.addNightModeToggleButton();
+                
+                console.log(`🌗 夜間モード設定: ${isNightTime ? '自動適用中' : '標準表示'} (${hour}時)`);
+            }
+            
+            // 夜間モード切り替えボタンの追加
+            addNightModeToggleButton() {
+                const headerRight = document.querySelector('.header-right');
+                if (!headerRight) return;
+                
+                const nightModeBtn = document.createElement('button');
+                nightModeBtn.id = 'night-mode-toggle';
+                nightModeBtn.className = 'settings-btn';
+                nightModeBtn.innerHTML = '🌙 夜間モード';
+                nightModeBtn.title = '地図を暗めに調整';
+                
+                nightModeBtn.onclick = () => {
+                    this.toggleNightMode();
+                };
+                
+                // 設定ボタンの前に挿入
+                const settingsBtn = headerRight.querySelector('.settings-btn');
+                if (settingsBtn) {
+                    headerRight.insertBefore(nightModeBtn, settingsBtn);
+                } else {
+                    headerRight.appendChild(nightModeBtn);
+                }
+            }
+            
+            // 夜間モードの有効/無効化（明度調整機能に統合）
+            enableNightMode(enabled) {
+                const nightModeBtn = document.getElementById('night-mode-toggle');
+                
+                if (enabled) {
+                    // 明度調整機能を使って70%に設定（夜間モード）
+                    this.updateMapBrightness(70);
+                    if (nightModeBtn) {
+                        nightModeBtn.innerHTML = '☀️ 標準表示';
+                        nightModeBtn.title = '明るい表示に戻す';
+                    }
+                    this.nightModeEnabled = true;
+                } else {
+                    // 明度調整機能を使って100%に設定（標準表示）
+                    this.updateMapBrightness(100);
+                    if (nightModeBtn) {
+                        nightModeBtn.innerHTML = '🌙 夜間モード';
+                        nightModeBtn.title = '地図を暗めに調整';
+                    }
+                    this.nightModeEnabled = false;
+                }
+            }
+            
+            // 夜間モードのトグル
+            toggleNightMode() {
+                this.enableNightMode(!this.nightModeEnabled);
+                
+                const message = this.nightModeEnabled ? 
+                    '地図を暗めに調整しました' : 
+                    '標準の明るさに戻しました';
+                    
+                this.addActivityFeedItem(
+                    this.nightModeEnabled ? '🌙' : '☀️', 
+                    message, 
+                    new Date()
+                );
+                
+                console.log(`🌗 夜間モード: ${this.nightModeEnabled ? 'ON' : 'OFF'}`);
+            }
 
-                japanCircles.forEach(region => {
-                    L.circle(region.center, {
+            // レイヤー切り替え時の日本列島境界更新
+            updateJapanBoundariesForLayer() {
+                if (!this.japanRegions || !this.map) {
+                    console.warn('⚠️ 日本地域データまたは地図が未初期化');
+                    return;
+                }
+                
+                try {
+                    // 地図コンテナにレイヤー別のクラスを適用
+                    this.applyLayerSpecificStyles();
+                    
+                    // 日本列島境界を再作成（現在のレイヤーに合わせて）
+                    this.createJapanBoundaries();
+                    console.log(`🔄 日本境界を${this.currentLayerName}レイヤーに適応`);
+                } catch (error) {
+                    console.error('❌ 日本境界更新エラー:', error);
+                }
+            }
+
+            // レイヤー別のスタイルクラスを適用
+            applyLayerSpecificStyles() {
+                const mapContainer = document.querySelector('.leaflet-container');
+                if (!mapContainer) return;
+                
+                // 既存のレイヤークラスを削除
+                mapContainer.classList.remove('dark-layer', 'light-layer', 'standard-layer');
+                
+                // 現在のレイヤーに応じてクラスを追加
+                switch (this.currentLayerName) {
+                    case 'ダーク（控えめ）':
+                        mapContainer.classList.add('dark-layer');
+                        break;
+                    case 'ライト（明るめ）':
+                        mapContainer.classList.add('light-layer');
+                        break;
+                    case '標準マップ':
+                        mapContainer.classList.add('standard-layer');
+                        break;
+                    default:
+                        mapContainer.classList.add('standard-layer');
+                        break;
+                }
+                
+                console.log(`🎨 レイヤークラス適用: ${this.currentLayerName}`);
+            }
+
+            // デバッグ用：境界線を強制再表示
+            forceBoundaryDisplay() {
+                console.log('🔧 境界線強制表示開始...');
+                
+                // 既存境界をクリア
+                if (this.japanBoundaryLayers) {
+                    this.japanBoundaryLayers.forEach(layer => {
+                        this.map.removeLayer(layer);
+                    });
+                }
+                this.japanBoundaryLayers = [];
+                
+                // テスト用の強制境界（必ず見える設定）
+                const testStyle = {
+                    color: '#ff0000',        // 赤色で確実に見える
+                    weight: 5,               // 非常に太い線
+                    opacity: 1.0,            // 完全不透明
+                    fillColor: 'rgba(255, 0, 0, 0.2)',
+                    fillOpacity: 0.2
+                };
+                
+                this.japanRegions.forEach(region => {
+                    const boundary = L.circle(region.center, {
                         radius: region.radius,
-                        color: '#4a9eff',
-                        weight: 1,
-                        opacity: 0.3,
-                        fillColor: '#4a9eff',
-                        fillOpacity: 0.05
-                    }).addTo(this.map).bindTooltip(region.name, { 
+                        ...testStyle,
+                        pane: 'japan-boundaries'
+                    }).addTo(this.map);
+                    
+                    this.japanBoundaryLayers.push(boundary);
+                    
+                    boundary.bindTooltip(`テスト境界: ${region.name}`, {
                         permanent: false, 
-                        direction: 'center',
-                        className: 'japan-region-tooltip'
+                        direction: 'center'
                     });
                 });
+                
+                console.log('✅ テスト境界表示完了 - 赤い円が見えるはずです');
             }
 
             // 気象庁公式TopoJSON津波予報区データ使用（89MB→1.5MB最適化済み）
@@ -2940,19 +3233,27 @@
                         </div>
                     </div>
                     
+
                     <div class="settings-section">
-                        <div class="settings-section-title" style="cursor: pointer;" onclick="window.monitor.toggleMapLayers()">
-                            <span>🗺️</span>
-                            地図設定
-                            <span id="map-layers-toggle" style="margin-left: auto; color: #74b9ff;">▶</span>
+                        <div class="settings-section-title" style="cursor: pointer;" onclick="window.monitor.toggleBrightnessSettings()">
+                            <span>🔆</span>
+                            表示調整
+                            <span id="brightness-settings-toggle" style="margin-left: auto; color: #74b9ff;">▶</span>
                         </div>
-                        <div class="map-layers-settings" id="settings-map-layers" style="display: none;">
-                            <div style="margin-bottom: 12px;">
-                                <div style="font-size: 14px; color: #a0aec0; margin-bottom: 8px;">
-                                    現在のレイヤー: <span id="current-layer-name" style="color: #74b9ff;">ダーク（明るめ）</span>
+                        <div class="brightness-settings" id="settings-brightness" style="display: none;">
+                            <div class="setting-item">
+                                <label class="setting-label">地図の明度</label>
+                                <div class="setting-input-group">
+                                    <input type="range" id="map-brightness-slider" min="50" max="200" step="10" value="100" 
+                                           onchange="window.monitor.updateMapBrightness(this.value); document.getElementById('brightness-display').textContent = this.value + '%'">
+                                    <span id="brightness-display" class="setting-value">100%</span>
+                                </div>
+                                <div class="brightness-presets" style="margin-top: 8px; display: flex; gap: 8px;">
+                                    <button class="preset-btn" onclick="window.monitor.setBrightness(70)" style="padding: 4px 8px; background: #2d3748; color: white; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer;">暗め</button>
+                                    <button class="preset-btn" onclick="window.monitor.setBrightness(100)" style="padding: 4px 8px; background: #2d3748; color: white; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer;">標準</button>
+                                    <button class="preset-btn" onclick="window.monitor.setBrightness(140)" style="padding: 4px 8px; background: #2d3748; color: white; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer;">明るめ</button>
                                 </div>
                             </div>
-                            <div id="layer-options"></div>
                         </div>
                     </div>
                     
@@ -3291,120 +3592,136 @@
                 }
             }
             
-            toggleMapLayers() {
-                const layersContainer = document.getElementById('settings-map-layers');
-                const toggleIcon = document.getElementById('map-layers-toggle');
+
+            
+            // 明度調整関連の関数
+            toggleBrightnessSettings() {
+                const brightnessContainer = document.getElementById('settings-brightness');
+                const toggleIcon = document.getElementById('brightness-settings-toggle');
                 
-                if (layersContainer && toggleIcon) {
-                    const isVisible = layersContainer.style.display !== 'none';
+                if (brightnessContainer && toggleIcon) {
+                    const isVisible = brightnessContainer.style.display !== 'none';
                     
                     if (isVisible) {
-                        layersContainer.style.display = 'none';
+                        brightnessContainer.style.display = 'none';
                         toggleIcon.textContent = '▶';
                     } else {
-                        layersContainer.style.display = 'block';
+                        brightnessContainer.style.display = 'block';
                         toggleIcon.textContent = '▼';
-                        // 地図レイヤーオプションを更新
-                        this.updateMapLayerOptions();
+                        // 現在の明度値を更新
+                        this.updateBrightnessDisplay();
                     }
                     
                     // アクティビティログに記録
-                    this.addActivityFeedItem('🗺️', 
-                        isVisible ? '地図設定を閉じました' : '地図設定を開きました', 
+                    this.addActivityFeedItem('🔆', 
+                        isVisible ? '表示調整を閉じました' : '表示調整を開きました', 
                         new Date()
                     );
                 }
             }
             
-            updateMapLayerOptions() {
-                const container = document.getElementById('layer-options');
-                const currentLayerEl = document.getElementById('current-layer-name');
+            // 地図の明度を更新
+            updateMapBrightness(brightness) {
+                this.mapBrightness = brightness;
+                this.applyMapBrightness();
                 
-                if (!container || !this.mapLayers) return;
-                
-                // 現在のレイヤー名を更新
-                if (currentLayerEl) {
-                    currentLayerEl.textContent = this.currentLayerName || 'ダーク（明るめ）';
+                // 設定パネルのスライダーとディスプレイを同期
+                const slider = document.getElementById('map-brightness-slider');
+                const display = document.getElementById('brightness-display');
+                if (slider) {
+                    slider.value = brightness;
+                }
+                if (display) {
+                    display.textContent = brightness + '%';
                 }
                 
-                // 既存のオプションをクリア
-                container.innerHTML = '';
+                // 設定を保存
+                if (typeof(Storage) !== "undefined") {
+                    localStorage.setItem('mapBrightness', brightness);
+                }
                 
-                // レイヤーオプションを個別に作成
-                Object.keys(this.mapLayers).forEach(layerName => {
-                    const isActive = layerName === this.currentLayerName;
-                    
-                    const optionDiv = document.createElement('div');
-                    optionDiv.className = `layer-option ${isActive ? 'active' : ''}`;
-                    optionDiv.setAttribute('data-layer', layerName);
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'layer-option-name';
-                    nameSpan.textContent = layerName;
-                    
-                    const statusSpan = document.createElement('span');
-                    statusSpan.className = 'layer-option-status';
-                    statusSpan.textContent = isActive ? '✓ 使用中' : '';
-                    
-                    optionDiv.appendChild(nameSpan);
-                    optionDiv.appendChild(statusSpan);
-                    
-                    // クリックイベントを直接追加
-                    optionDiv.addEventListener('click', () => {
-                        console.log(`Clicked layer: "${layerName}"`);
-                        this.changeMapLayer(layerName);
-                    });
-                    
-                    container.appendChild(optionDiv);
-                    
-                    console.log(`Created option for "${layerName}", active: ${isActive}`);
-                });
-                
-                console.log(`UI Updated - Current layer: "${this.currentLayerName}"`);
+                // アクティビティログに記録
+                this.addActivityFeedItem('🔆', 
+                    `地図明度を${brightness}%に調整しました`, 
+                    new Date()
+                );
             }
             
-            changeMapLayer(layerName) {
-                console.log(`🔄 Changing map layer to: "${layerName}"`);
+            // 明度プリセット設定
+            setBrightness(brightness) {
+                const slider = document.getElementById('map-brightness-slider');
+                const display = document.getElementById('brightness-display');
                 
-                if (!this.mapLayers || !this.mapLayers[layerName] || !this.map) {
-                    console.error(`❌ Layer "${layerName}" not found or map not ready`);
-                    return;
+                if (slider) {
+                    slider.value = brightness;
+                }
+                if (display) {
+                    display.textContent = brightness + '%';
                 }
                 
-                try {
-                    // 現在のレイヤーを削除
-                    if (this.currentLayer) {
-                        this.map.removeLayer(this.currentLayer);
-                        console.log(`🗑️ Removed previous layer`);
-                    }
-                    
-                    // 新しいレイヤーを追加
-                    this.currentLayer = this.mapLayers[layerName];
-                    this.currentLayer.addTo(this.map);
-                    this.currentLayerName = layerName;
-                    
-                    console.log(`✅ Added new layer: "${layerName}"`);
-                    
-                    // UI を即座に更新
-                    this.updateMapLayerOptions();
-                    
-                    // 現在のレイヤー表示も更新
-                    const currentLayerEl = document.getElementById('current-layer-name');
-                    if (currentLayerEl) {
-                        currentLayerEl.textContent = layerName;
-                    }
-                    
-                    // レイヤー変更イベントを手動で発火
-                    this.map.fire('baselayerchange', { name: layerName, layer: this.currentLayer });
-                    
-                    // アクティビティログに記録
-                    this.addActivityFeedItem('🗺️', `地図レイヤーを${layerName}に変更しました`, new Date());
-                    
-                    console.log(`🎯 Successfully changed to: "${layerName}"`);
-                } catch (error) {
-                    console.error(`❌ Error changing layer to "${layerName}":`, error);
+                this.updateMapBrightness(brightness);
+            }
+            
+            // 地図に明度フィルターを適用
+            applyMapBrightness() {
+                const mapContainer = document.querySelector('.leaflet-container');
+                if (mapContainer && this.mapBrightness) {
+                    const brightness = this.mapBrightness / 100;
+                    mapContainer.style.filter = `brightness(${brightness})`;
+                    console.log(`🔆 地図明度を${this.mapBrightness}%に設定`);
                 }
             }
+            
+            // 明度表示を更新
+            updateBrightnessDisplay() {
+                const slider = document.getElementById('map-brightness-slider');
+                const display = document.getElementById('brightness-display');
+                
+                // 保存された明度値を読み込み
+                if (typeof(Storage) !== "undefined") {
+                    const savedBrightness = localStorage.getItem('mapBrightness');
+                    if (savedBrightness) {
+                        this.mapBrightness = parseInt(savedBrightness);
+                    } else {
+                        this.mapBrightness = 100; // デフォルト値
+                    }
+                } else {
+                    this.mapBrightness = 100;
+                }
+                
+                if (slider) {
+                    slider.value = this.mapBrightness;
+                }
+                if (display) {
+                    display.textContent = this.mapBrightness + '%';
+                }
+                
+                // 明度を適用
+                this.applyMapBrightness();
+            }
+            
+            // 明度設定を初期化
+            initializeBrightnessSettings() {
+                // 保存された明度値を読み込み
+                if (typeof(Storage) !== "undefined") {
+                    const savedBrightness = localStorage.getItem('mapBrightness');
+                    if (savedBrightness) {
+                        this.mapBrightness = parseInt(savedBrightness);
+                    } else {
+                        this.mapBrightness = 100; // デフォルト値
+                        localStorage.setItem('mapBrightness', '100');
+                    }
+                } else {
+                    this.mapBrightness = 100;
+                }
+                
+                // 地図が読み込まれた後に明度を適用
+                setTimeout(() => {
+                    this.applyMapBrightness();
+                    console.log(`🔆 地図明度を${this.mapBrightness}%で初期化`);
+                }, 500);
+            }
+            
             /**
              * 実用津波監視システムセットアップ (50%完成度版)
              */
@@ -5046,6 +5363,59 @@
         document.addEventListener('DOMContentLoaded', () => {
             window.monitor = new ProfessionalEarthquakeMonitor();
         });
+        // デバッグ用関数をグローバルに公開
+        window.testBoundaries = () => {
+            if (window.monitor) {
+                window.monitor.forceBoundaryDisplay();
+            } else {
+                console.error('❌ monitor が初期化されていません');
+            }
+        };
+        
+        window.refreshBoundaries = () => {
+            if (window.monitor) {
+                window.monitor.updateJapanBoundariesForLayer();
+                console.log('🔄 境界更新を実行しました');
+            } else {
+                console.error('❌ monitor が初期化されていません');
+            }
+        };
+        
+        window.hideTsunami = () => {
+            if (window.monitor) {
+                // 津波レイヤーを削除
+                if (window.monitor.tsunamiLayers) {
+                    window.monitor.tsunamiLayers.forEach(tsunami => {
+                        if (tsunami.layer && window.monitor.map.hasLayer(tsunami.layer)) {
+                            window.monitor.map.removeLayer(tsunami.layer);
+                        }
+                    });
+                    console.log('🌊 津波レイヤーを一時的に非表示にしました');
+                } else {
+                    console.log('⚠️ 津波レイヤーが見つかりません');
+                }
+                
+                // 地図上のすべてのGeoJSONレイヤーも削除（津波データ）
+                window.monitor.map.eachLayer(layer => {
+                    if (layer instanceof L.GeoJSON) {
+                        window.monitor.map.removeLayer(layer);
+                        console.log('🗑️ GeoJSONレイヤーを削除');
+                    }
+                });
+                
+                // 境界も更新
+                setTimeout(() => {
+                    window.refreshBoundaries();
+                }, 100);
+            } else {
+                console.error('❌ monitor が初期化されていません');
+            }
+        };
+        
+        console.log('🛠️ デバッグコマンド利用可能:');
+        console.log('   testBoundaries() - テスト境界表示（赤い円）');
+        console.log('   refreshBoundaries() - 境界更新（緑色の円）');
+        console.log('   hideTsunami() - 津波レイヤー非表示');
     </script>
 </body>
 </html>

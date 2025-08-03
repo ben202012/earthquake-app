@@ -403,34 +403,9 @@ class TsunamiAlertSystem {
             animation: alertPulse 1s ease-in-out infinite;
         `;
         
-        overlay.innerHTML = `
-            <div class="alert-content" style="
-                text-align: center;
-                padding: 40px;
-                background: ${levelConfig.color};
-                border-radius: 20px;
-                max-width: 600px;
-                box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
-            ">
-                <h1 style="font-size: 48px; margin: 0 0 20px 0;">${levelConfig.title}</h1>
-                <h2 style="font-size: 32px; margin: 0 0 20px 0;">${alert.areaName}</h2>
-                <p style="font-size: 24px; margin: 0 0 30px 0;">${levelConfig.message}</p>
-                <div style="font-size: 20px; margin: 20px 0;">
-                    <div>予想津波高: <strong>${alert.waveHeight}</strong></div>
-                    <div>到達予想: <strong>${alert.arrivalTime}</strong></div>
-                </div>
-                <button id="acknowledge-alert" style="
-                    background: white;
-                    color: ${levelConfig.color};
-                    border: none;
-                    padding: 15px 30px;
-                    font-size: 18px;
-                    border-radius: 10px;
-                    cursor: pointer;
-                    margin-top: 20px;
-                ">確認</button>
-            </div>
-        `;
+        // XSS対策: innerHTML使用を廃止し、DOM要素を安全に構築
+        const alertContent = this.createSecureAlertContent(levelConfig, alert);
+        overlay.appendChild(alertContent);
         
         // CSS アニメーション追加
         const style = document.createElement('style');
@@ -460,6 +435,145 @@ class TsunamiAlertSystem {
         document.body.appendChild(overlay);
     }
     
+    /**
+     * セキュアな警報表示コンテンツの作成
+     * XSS対策: innerHTML を使用せず、DOM要素を安全に構築
+     */
+    createSecureAlertContent(levelConfig, alert) {
+        // メインコンテナ
+        const alertContent = document.createElement('div');
+        alertContent.className = 'alert-content';
+        
+        // スタイル設定（XSS対策済み）
+        const secureColor = this.sanitizeColor(levelConfig.color);
+        alertContent.style.cssText = `
+            text-align: center;
+            padding: 40px;
+            background: ${secureColor};
+            border-radius: 20px;
+            max-width: 600px;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
+        `;
+        
+        // タイトル（h1）
+        const title = document.createElement('h1');
+        title.textContent = this.sanitizeText(levelConfig.title);
+        title.style.cssText = 'font-size: 48px; margin: 0 0 20px 0;';
+        alertContent.appendChild(title);
+        
+        // 地域名（h2）
+        const areaName = document.createElement('h2');
+        areaName.textContent = this.sanitizeText(alert.areaName);
+        areaName.style.cssText = 'font-size: 32px; margin: 0 0 20px 0;';
+        alertContent.appendChild(areaName);
+        
+        // メッセージ（p）
+        const message = document.createElement('p');
+        message.textContent = this.sanitizeText(levelConfig.message);
+        message.style.cssText = 'font-size: 24px; margin: 0 0 30px 0;';
+        alertContent.appendChild(message);
+        
+        // 詳細情報コンテナ
+        const detailsContainer = document.createElement('div');
+        detailsContainer.style.cssText = 'font-size: 20px; margin: 20px 0;';
+        
+        // 津波高情報
+        const waveHeightDiv = document.createElement('div');
+        const waveHeightText = document.createTextNode('予想津波高: ');
+        const waveHeightStrong = document.createElement('strong');
+        waveHeightStrong.textContent = this.sanitizeText(alert.waveHeight);
+        waveHeightDiv.appendChild(waveHeightText);
+        waveHeightDiv.appendChild(waveHeightStrong);
+        detailsContainer.appendChild(waveHeightDiv);
+        
+        // 到達時間情報
+        const arrivalTimeDiv = document.createElement('div');
+        const arrivalTimeText = document.createTextNode('到達予想: ');
+        const arrivalTimeStrong = document.createElement('strong');
+        arrivalTimeStrong.textContent = this.sanitizeText(alert.arrivalTime);
+        arrivalTimeDiv.appendChild(arrivalTimeText);
+        arrivalTimeDiv.appendChild(arrivalTimeStrong);
+        detailsContainer.appendChild(arrivalTimeDiv);
+        
+        alertContent.appendChild(detailsContainer);
+        
+        // 確認ボタン
+        const acknowledgeButton = document.createElement('button');
+        acknowledgeButton.id = 'acknowledge-alert';
+        acknowledgeButton.textContent = '確認';
+        acknowledgeButton.style.cssText = `
+            background: white;
+            color: ${secureColor};
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        `;
+        alertContent.appendChild(acknowledgeButton);
+        
+        return alertContent;
+    }
+    
+    /**
+     * テキストのサニタイゼーション
+     * XSS攻撃を防ぐため、危険な文字をエスケープ
+     */
+    sanitizeText(input) {
+        if (typeof input !== 'string') {
+            return String(input);
+        }
+        
+        // HTMLエンティティエスケープ
+        const div = document.createElement('div');
+        div.textContent = input;
+        return div.innerHTML
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+    
+    /**
+     * CSS色値のサニタイゼーション
+     * 不正なCSS値によるインジェクションを防ぐ
+     */
+    sanitizeColor(color) {
+        if (typeof color !== 'string') {
+            return '#808080'; // デフォルトのグレー
+        }
+        
+        // 許可される色形式のパターン
+        const validColorPatterns = [
+            /^#[0-9A-Fa-f]{3}$/,           // #RGB
+            /^#[0-9A-Fa-f]{6}$/,           // #RRGGBB
+            /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/,  // rgb(r,g,b)
+            /^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[0-9.]+\s*\)$/,  // rgba(r,g,b,a)
+        ];
+        
+        // 定義済み色名（安全な基本色のみ）
+        const validColorNames = [
+            'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink',
+            'black', 'white', 'gray', 'brown', 'cyan', 'magenta'
+        ];
+        
+        // パターンマッチング
+        if (validColorPatterns.some(pattern => pattern.test(color.trim()))) {
+            return color.trim();
+        }
+        
+        // 色名チェック
+        if (validColorNames.includes(color.toLowerCase().trim())) {
+            return color.toLowerCase().trim();
+        }
+        
+        // 不正な色値の場合はデフォルト色を返す
+        console.warn(`⚠️ 不正な色値が検出されました: ${color}`);
+        return '#808080';
+    }
+
     /**
      * 警報確認
      */

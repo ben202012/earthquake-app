@@ -13,9 +13,13 @@ class JMAXMLClient {
                 historical: 'https://xml.kishou.go.jp/historicaldata/'
             },
             
-            // プロキシサーバー (CORS回避用)
-            proxyService: 'https://api.allorigins.win/get?url=',
-            corsProxyAlternative: 'https://corsproxy.io/?',
+            // 注意: 外部プロキシサービスは信頼性とセキュリティ上の問題があります
+            // 可能な限り自前のプロキシ機能やCORS設定で対応することを推奨
+            proxyService: null, // 'https://api.allorigins.win/get?url=' - セキュリティ上無効化
+            corsProxyAlternative: null, // 'https://corsproxy.io/?' - セキュリティ上無効化
+            
+            // 代替案: 自前のプロキシエンドポイントを使用
+            selfProxyEndpoint: '/api/proxy/jma',
             
             // 更新間隔
             updateInterval: 60000, // 1分間隔
@@ -79,45 +83,60 @@ class JMAXMLClient {
     }
     
     /**
-     * プロキシ経由でのデータ取得 (CORS回避)
+     * セキュアなプロキシ経由でのデータ取得
+     * 外部プロキシサービスを廃止し、自前のプロキシ機能を使用
      */
     async fetchWithProxy(url) {
-        const proxyUrls = [
-            `${this.config.proxyService}${encodeURIComponent(url)}`,
-            `${this.config.corsProxyAlternative}${encodeURIComponent(url)}`
-        ];
+        // セキュリティ改善: 外部プロキシサービスの使用を停止
+        // 自前のプロキシエンドポイントを使用
         
-        for (const proxyUrl of proxyUrls) {
+        try {
+            // 自前のプロキシサーバーを使用（セキュア）
+            const selfProxyUrl = `${this.config.selfProxyEndpoint}?url=${encodeURIComponent(url)}`;
+            
+            const response = await fetch(selfProxyUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/xml, text/xml, */*',
+                    'User-Agent': 'JMA-Tsunami-Monitor/1.0',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                // セキュリティ: タイムアウト設定でDDoS防止
+                signal: AbortSignal.timeout(15000)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const text = await response.text();
+            return text;
+            
+        } catch (error) {
+            console.warn(`セキュアプロキシ失敗: ${error.message}`);
+            
+            // フォールバック: 直接取得を試行（CORSエラーの可能性あり）
             try {
-                const response = await fetch(proxyUrl, {
+                console.log('🔄 直接API接続にフォールバック中...');
+                const directResponse = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/xml, text/xml, */*',
                         'User-Agent': 'JMA-Tsunami-Monitor/1.0'
                     },
-                    timeout: 15000
+                    signal: AbortSignal.timeout(10000)
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                if (directResponse.ok) {
+                    console.log('✅ 直接接続成功');
+                    return await directResponse.text();
                 }
-                
-                const text = await response.text();
-                
-                // プロキシサービスによる返答形式の対応
-                if (text.includes('contents')) {
-                    const jsonData = JSON.parse(text);
-                    return jsonData.contents;
-                } else {
-                    return text;
-                }
-                
-            } catch (error) {
-                console.warn(`プロキシ失敗: ${proxyUrl}`, error.message);
+            } catch (directError) {
+                console.warn('直接接続も失敗:', directError.message);
             }
+            
+            throw new Error('セキュアなデータ取得に失敗しました');
         }
-        
-        throw new Error('プロキシ経由での取得に失敗');
     }
     
     /**
