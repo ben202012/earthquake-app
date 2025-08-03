@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS対応プロキシテスト</title>
+    <style>
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0c1623 0%, #1a2332 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a9eff;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .test-section h2 {
+            color: #67e8f9;
+            margin-bottom: 15px;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 158, 255, 0.4);
+        }
+        
+        .test-button.success { background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%); }
+        .test-button.warning { background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%); }
+        .test-button.danger { background: linear-gradient(135deg, #ff4757 0%, #c44569 100%); }
+        
+        .status-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+        }
+        
+        .api-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .api-result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #4a9eff;
+        }
+        
+        .api-result.success { border-left-color: #2ed573; }
+        .api-result.error { border-left-color: #ff4757; }
+        
+        .api-result h3 {
+            margin: 0 0 10px 0;
+            color: #67e8f9;
+            font-size: 16px;
+        }
+        
+        .response-data {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 12px;
+            color: #e0e0e0;
+            white-space: pre-wrap;
+        }
+        
+        .log-area {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        .success { color: #2ed573; }
+        .warning { color: #ffa502; }
+        .error { color: #ff4757; }
+        .info { color: #4a9eff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 CORS対応プロキシテスト</h1>
+        
+        <div class="test-section">
+            <h2>📊 サーバー状態確認</h2>
+            <div class="test-buttons">
+                <button class="test-button" onclick="testServerStatus()">📊 サーバー状態</button>
+                <button class="test-button" onclick="testAllAPIs()">🌐 全API一括テスト</button>
+                <button class="test-button danger" onclick="clearResults()">🗑️ 結果クリア</button>
+            </div>
+            <div class="status-info" id="server-status">
+                サーバー状態を確認中...
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔗 外部API個別テスト</h2>
+            <div class="test-buttons">
+                <button class="test-button" onclick="testAPI('usgs')">🇺🇸 USGS地震情報</button>
+                <button class="test-button" onclick="testAPI('emsc')">🇪🇺 EMSC地震情報</button>
+                <button class="test-button warning" onclick="testAPI('jma')">🇯🇵 気象庁データ</button>
+                <button class="test-button" onclick="testAPI('noaa')">🌊 NOAA津波センター</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 API応答結果</h2>
+            <div class="api-results" id="api-results">
+                <!-- API結果がここに表示されます -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 多地点検証システムテスト</h2>
+            <div class="test-buttons">
+                <button class="test-button success" onclick="testMultiSiteVerification()">🔄 多地点検証開始</button>
+                <button class="test-button" onclick="showVerificationStatus()">📊 検証状況確認</button>
+            </div>
+            <div class="response-data" id="verification-results">
+                多地点検証結果がここに表示されます
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 ログ</h2>
+            <div class="log-area" id="log-area"></div>
+            <button class="test-button" onclick="clearLog()" style="margin-top: 10px;">🗑️ ログクリア</button>
+        </div>
+    </div>
+
+    <script src="multi-site-verification.js"></script>
+    <script>
+        let verificationSystem = null;
+        
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('info', 'CORS対応プロキシテストページ読み込み完了');
+            await testServerStatus();
+            
+            // 多地点検証システム初期化
+            if (window.MultiSiteVerificationSystem) {
+                verificationSystem = new MultiSiteVerificationSystem();
+                log('info', '多地点検証システム初期化完了');
+            }
+        });
+        
+        async function testServerStatus() {
+            try {
+                log('info', 'サーバー状態確認開始...');
+                
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('server-status');
+                if (response.ok) {
+                    statusElement.innerHTML = `
+                        <div class="success"><strong>✅ サーバー状態:</strong> 正常稼働</div>
+                        <div><strong>起動時刻:</strong> ${new Date(data.timestamp).toLocaleString('ja-JP')}</div>
+                        <div><strong>サーバー:</strong> ${data.server}</div>
+                        <div><strong>利用可能API:</strong> ${data.availableAPIs.join(', ')}</div>
+                    `;
+                    log('success', 'サーバー状態確認成功');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+            } catch (error) {
+                const statusElement = document.getElementById('server-status');
+                statusElement.innerHTML = `<div class="error">❌ サーバー接続エラー: ${error.message}</div>`;
+                log('error', `サーバー状態確認失敗: ${error.message}`);
+            }
+        }
+        
+        async function testAPI(apiId) {
+            try {
+                log('info', `${apiId.toUpperCase()} API テスト開始...`);
+                
+                const startTime = Date.now();
+                const response = await fetch(`/api/proxy/${apiId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json, text/html, */*'
+                    }
+                });
+                const responseTime = Date.now() - startTime;
+                
+                let data, isJSON = false;
+                const contentType = response.headers.get('content-type') || '';
+                
+                try {
+                    const text = await response.text();
+                    if (contentType.includes('application/json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+                        data = JSON.parse(text);
+                        isJSON = true;
+                    } else {
+                        data = text;
+                    }
+                } catch (e) {
+                    data = `解析エラー: ${e.message}`;
+                }
+                
+                const resultContainer = document.getElementById('api-results');
+                const resultElement = document.createElement('div');
+                resultElement.className = `api-result ${response.ok ? 'success' : 'error'}`;
+                
+                const apiNames = {
+                    'usgs': 'USGS地震情報',
+                    'emsc': 'EMSC地震情報', 
+                    'jma': '気象庁データ',
+                    'noaa': 'NOAA地震データ'
+                };
+                
+                const displayData = isJSON ? 
+                    JSON.stringify(data, null, 2).substring(0, 1500) + (JSON.stringify(data, null, 2).length > 1500 ? '...' : '') :
+                    data.toString().substring(0, 800) + (data.toString().length > 800 ? '...' : '');
+                
+                resultElement.innerHTML = `
+                    <h3>${response.ok ? '✅' : '❌'} ${apiNames[apiId]}</h3>
+                    <div><strong>ステータス:</strong> ${response.status} ${response.statusText}</div>
+                    <div><strong>応答時間:</strong> ${responseTime}ms</div>
+                    <div><strong>Content-Type:</strong> ${contentType}</div>
+                    <div><strong>データ形式:</strong> ${isJSON ? 'JSON' : 'Text/HTML'}</div>
+                    <pre style="margin-top: 10px; max-height: 250px; overflow-y: auto; font-size: 11px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px;">${displayData}</pre>
+                `;
+                
+                resultContainer.appendChild(resultElement);
+                
+                if (response.ok) {
+                    log('success', `${apiNames[apiId]} テスト成功 (${responseTime}ms)`);
+                } else {
+                    log('error', `${apiNames[apiId]} テスト失敗: HTTP ${response.status}`);
+                }
+                
+            } catch (error) {
+                log('error', `${apiId.toUpperCase()} API テストエラー: ${error.message}`);
+                
+                const resultContainer = document.getElementById('api-results');
+                const resultElement = document.createElement('div');
+                resultElement.className = 'api-result error';
+                resultElement.innerHTML = `
+                    <h3>❌ ${apiId.toUpperCase()} API</h3>
+                    <div class="error">ネットワークエラー: ${error.message}</div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #ffa502;">
+                        このAPIは現在利用できません。サーバーログを確認してください。
+                    </div>
+                `;
+                resultContainer.appendChild(resultElement);
+            }
+        }
+        
+        async function testAllAPIs() {
+            log('info', '全API一括テスト開始...');
+            clearResults();
+            
+            const apis = ['usgs', 'emsc', 'jma', 'noaa'];
+            for (const api of apis) {
+                await testAPI(api);
+                // API間に少し間隔を空ける
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            log('info', '全API一括テスト完了');
+        }
+        
+        async function testMultiSiteVerification() {
+            if (!verificationSystem) {
+                log('error', '多地点検証システムが初期化されていません');
+                return;
+            }
+            
+            try {
+                log('info', '多地点検証テスト開始...');
+                
+                // 検証システム開始
+                await verificationSystem.startMultiSiteVerification();
+                
+                // 少し待ってからデータ収集
+                setTimeout(async () => {
+                    try {
+                        const data = await verificationSystem.gatherDataFromAllSources();
+                        
+                        document.getElementById('verification-results').textContent = 
+                            JSON.stringify(data, null, 2);
+                        
+                        log('success', `多地点検証完了: ${data.length}ソースからデータ取得`);
+                        
+                    } catch (error) {
+                        log('error', `多地点検証エラー: ${error.message}`);
+                        document.getElementById('verification-results').textContent = 
+                            `エラー: ${error.message}`;
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                log('error', `多地点検証システムテストエラー: ${error.message}`);
+            }
+        }
+        
+        function showVerificationStatus() {
+            if (!verificationSystem) {
+                log('warning', '多地点検証システムが初期化されていません');
+                return;
+            }
+            
+            const status = verificationSystem.getSystemStatus();
+            document.getElementById('verification-results').textContent = 
+                JSON.stringify(status, null, 2);
+            
+            log('info', '検証システム状況を表示しました');
+        }
+        
+        function clearResults() {
+            document.getElementById('api-results').innerHTML = '';
+            log('info', 'テスト結果をクリアしました');
+        }
+        
+        function log(type, message) {
+            const logArea = document.getElementById('log-area');
+            const timestamp = new Date().toLocaleTimeString('ja-JP');
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log-area').innerHTML = '';
+            log('info', 'ログをクリアしました');
+        }
+    </script>
+</body>
+</html> 

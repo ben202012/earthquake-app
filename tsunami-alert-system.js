@@ -11,7 +11,7 @@ class TsunamiAlertSystem {
                 'major_warning': {
                     priority: 4,
                     color: '#8B0000',
-                    sound: 'emergency_siren.mp3',
+                    sound: 'major_warning', // Web Audio API使用
                     title: '🚨 大津波警報',
                     message: '直ちに高台へ避難してください！',
                     autoRepeat: true,
@@ -20,7 +20,7 @@ class TsunamiAlertSystem {
                 'warning': {
                     priority: 3,
                     color: '#FF0000', 
-                    sound: 'warning_tone.mp3',
+                    sound: 'warning', // Web Audio API使用
                     title: '⚠️ 津波警報',
                     message: '津波の危険があります。避難準備をしてください。',
                     autoRepeat: true,
@@ -29,7 +29,7 @@ class TsunamiAlertSystem {
                 'advisory': {
                     priority: 2,
                     color: '#FFD700',
-                    sound: 'notification.mp3', 
+                    sound: 'advisory', // Web Audio API使用
                     title: '📢 津波注意報',
                     message: '海岸付近では注意してください。',
                     autoRepeat: false,
@@ -72,6 +72,9 @@ class TsunamiAlertSystem {
             onEmergency: []
         };
         
+        // Web Audio API統合
+        this.audioSystem = window.audioAlertSystem || null;
+        
         this.initializeSystem();
     }
     
@@ -85,8 +88,8 @@ class TsunamiAlertSystem {
             // ブラウザ通知許可要求
             await this.requestNotificationPermission();
             
-            // 音声ファイル読み込み
-            this.preloadAudioFiles();
+            // 音声システム初期化
+            await this.initializeAudioSystem();
             
             // Web Notification API対応チェック
             this.checkBrowserSupport();
@@ -122,28 +125,36 @@ class TsunamiAlertSystem {
     }
     
     /**
-     * 音声ファイル事前読み込み
+     * 音声システム初期化 (Web Audio API統合)
      */
-    preloadAudioFiles() {
-        const audioFiles = {
-            'emergency_siren': './assets/sounds/emergency_siren.mp3',
-            'warning_tone': './assets/sounds/warning_tone.mp3', 
-            'notification': './assets/sounds/notification.mp3',
-            'clear_tone': './assets/sounds/clear_tone.mp3'
-        };
+    async initializeAudioSystem() {
+        console.log('🔊 音声システム初期化開始');
         
-        Object.entries(audioFiles).forEach(([key, src]) => {
-            const audio = new Audio();
-            audio.preload = 'auto';
-            audio.volume = this.config.audio.volume;
+        try {
+            // グローバル音声システムとの統合
+            if (window.audioAlertSystem) {
+                this.audioSystem = window.audioAlertSystem;
+                
+                // 音声システム初期化
+                const initialized = await this.audioSystem.initialize();
+                
+                if (initialized) {
+                    console.log('✅ 音声システム統合完了');
+                    
+                    // 設定から音量を適用
+                    if (this.config.audio.volume !== undefined) {
+                        this.audioSystem.setMasterVolume(this.config.audio.volume);
+                    }
+                } else {
+                    console.warn('⚠️ 音声システム初期化失敗');
+                }
+            } else {
+                console.warn('⚠️ グローバル音声システムが見つかりません');
+            }
             
-            // フォールバック音声を使用
-            audio.src = this.generateToneForAlert(key);
-            
-            this.audioElements.set(key, audio);
-        });
-        
-        console.log('🔊 警報音声ファイル読み込み完了');
+        } catch (error) {
+            console.error('❌ 音声システム統合エラー:', error);
+        }
     }
     
     /**
@@ -295,24 +306,27 @@ class TsunamiAlertSystem {
     }
     
     /**
-     * 警報音再生
+     * 警報音再生 (Web Audio API使用)
      */
     async playAlertSound(alert, levelConfig) {
         if (!this.config.notifications.sound || !this.state.soundEnabled) {
             return;
         }
         
+        // Web Audio APIシステムが利用可能かチェック
+        if (!this.audioSystem) {
+            console.warn('⚠️ 音声システムが利用できません');
+            return;
+        }
+        
         try {
-            const audioKey = alert.level === 'major_warning' ? 'emergency_siren' :
-                           alert.level === 'warning' ? 'warning_tone' : 'notification';
+            // 警報レベルに応じた音声再生
+            const success = await this.audioSystem.playAlert(alert.level);
             
-            const audio = this.audioElements.get(audioKey);
-            
-            if (audio) {
-                audio.currentTime = 0;
-                await audio.play();
-                
-                console.log(`🔊 警報音再生: ${audioKey}`);
+            if (success) {
+                console.log(`🔊 警報音再生: ${alert.level} - ${alert.areaName}`);
+            } else {
+                console.warn(`⚠️ 警報音再生失敗: ${alert.level}`);
             }
             
         } catch (error) {
@@ -559,35 +573,32 @@ class TsunamiAlertSystem {
     }
     
     /**
-     * 音声生成 (フォールバック)
+     * 音声システムテスト
      */
-    generateToneForAlert(type) {
-        // Web Audio APIで基本的な警報音を生成
-        const context = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = context.createOscillator();
-        const gainNode = context.createGain();
+    async testAudioSystem() {
+        console.log('🧪 津波警報音声システムテスト');
         
-        oscillator.connect(gainNode);
-        gainNode.connect(context.destination);
-        
-        switch (type) {
-            case 'emergency_siren':
-                oscillator.frequency.setValueAtTime(800, context.currentTime);
-                break;
-            case 'warning_tone':
-                oscillator.frequency.setValueAtTime(600, context.currentTime);
-                break;
-            case 'notification':
-                oscillator.frequency.setValueAtTime(400, context.currentTime);
-                break;
-            default:
-                oscillator.frequency.setValueAtTime(300, context.currentTime);
+        if (!this.audioSystem) {
+            console.warn('⚠️ 音声システムが利用できません');
+            return false;
         }
         
-        gainNode.gain.setValueAtTime(0.3, context.currentTime);
-        
-        // 1秒間の音声を生成してBase64エンコード
-        return 'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ4AAAA=';
+        try {
+            // テスト音再生
+            const success = await this.audioSystem.playTestSound();
+            
+            if (success) {
+                console.log('✅ 音声システムテスト成功');
+            } else {
+                console.warn('⚠️ 音声システムテスト失敗');
+            }
+            
+            return success;
+            
+        } catch (error) {
+            console.error('❌ 音声システムテストエラー:', error);
+            return false;
+        }
     }
     
     /**
@@ -624,7 +635,24 @@ class TsunamiAlertSystem {
     toggleSound() {
         this.state.soundEnabled = !this.state.soundEnabled;
         console.log(`🔊 音声: ${this.state.soundEnabled ? 'ON' : 'OFF'}`);
+        
+        // 音声システムが利用可能で、OFFに設定された場合は全警報音を停止
+        if (!this.state.soundEnabled && this.audioSystem) {
+            this.audioSystem.stopAllAlerts();
+        }
+        
         return this.state.soundEnabled;
+    }
+    
+    /**
+     * 音量設定
+     */
+    setVolume(volume) {
+        if (this.audioSystem) {
+            this.audioSystem.setMasterVolume(volume);
+            this.config.audio.volume = volume;
+            console.log(`🔊 音量設定: ${Math.round(volume * 100)}%`);
+        }
     }
     
     /**

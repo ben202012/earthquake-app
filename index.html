@@ -1499,6 +1499,7 @@
     <script src="jma-tsunami-loader.js"></script>
     <script src="jma-xml-client.js"></script>
     <script src="tsunami-data-store.js"></script>
+    <script src="audio-alert-system.js"></script>
     <script src="tsunami-alert-system.js"></script>
     <script src="tsunami-manager.js"></script>
     <!-- 60%実用機能達成のための高度システム -->
@@ -3005,6 +3006,14 @@
                             <button class="test-button" onclick="window.monitor.testNotification()">🔔 通知テスト</button>
                             <button class="test-button" onclick="window.monitor.testSound()">🔊 音声テスト</button>
                         </div>
+                        <div class="setting-item">
+                            <button class="test-button" onclick="window.monitor.testTsunamiAlert('advisory')">🌊 津波注意報テスト</button>
+                            <button class="test-button" onclick="window.monitor.testTsunamiAlert('warning')">⚠️ 津波警報テスト</button>
+                            <button class="test-button" onclick="window.monitor.testTsunamiAlert('major_warning')">🚨 大津波警報テスト</button>
+                        </div>
+                        <div class="setting-item">
+                            <button class="test-button" onclick="window.monitor.stopAllSounds()" style="background: linear-gradient(135deg, #ff4757 0%, #c44569 100%);">🔇 全音声停止</button>
+                        </div>
                         </div>
                     </div>
                 `;
@@ -3104,19 +3113,50 @@
                 }
             }
             
-            testSound() {
+            async testSound() {
                 try {
-                    this.playAlertSound(3); // 3回繰り返し再生
-                    this.addActivityFeedItem('🔊', '音声テストを実行しました（3回再生）', new Date());
+                    // 新しい音声システムを使用
+                    if (window.audioAlertSystem) {
+                        const success = await window.audioAlertSystem.playTestSound();
+                        if (success) {
+                            this.addActivityFeedItem('🔊', '音声テストを実行しました（Web Audio API）', new Date());
+                        } else {
+                            throw new Error('音声システムが利用できません');
+                        }
+                    } else {
+                        // フォールバック: 従来の方式
+                        this.playAlertSound(1);
+                        this.addActivityFeedItem('🔊', '音声テストを実行しました（フォールバック）', new Date());
+                    }
                 } catch (error) {
                     console.error('音声テスト失敗:', error);
                     alert('音声テストに失敗しました。ブラウザの設定を確認してください。');
                 }
             }
             
-            // 音声アラート再生関数（繰り返し対応）
-            playAlertSound(repeatCount = 1) {
+            // 音声アラート再生関数（新しい音声システム統合）
+            async playAlertSound(repeatCount = 1) {
                 try {
+                    // 新しい音声システムを優先使用
+                    if (window.audioAlertSystem) {
+                        // 音量設定を適用
+                        const volume = this.settings.volume / 100;
+                        window.audioAlertSystem.setMasterVolume(volume);
+                        
+                        // テスト音を指定回数再生
+                        for (let i = 0; i < repeatCount; i++) {
+                            await window.audioAlertSystem.playAlert('test');
+                            if (i < repeatCount - 1) {
+                                // 次の再生まで0.8秒待機
+                                await new Promise(resolve => setTimeout(resolve, 800));
+                            }
+                        }
+                        
+                        console.log(`🔊 音声アラートを${repeatCount}回再生開始 (新システム)`);
+                        return;
+                    }
+                    
+                    // フォールバック: 従来の実装
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     const volume = this.settings.volume / 100 * 0.3;
                     
@@ -3145,7 +3185,7 @@
                         oscillator.stop(audioContext.currentTime + delay + 0.3);
                     }
                     
-                    console.log(`🔊 音声アラートを${repeatCount}回再生開始`);
+                    console.log(`🔊 音声アラートを${repeatCount}回再生開始 (フォールバック)`);
                 } catch (error) {
                     console.error('音声再生エラー:', error);
                     throw error;
@@ -3158,6 +3198,72 @@
                 
                 if (overlay) overlay.remove();
                 if (panel) panel.remove();
+            }
+            
+            async testTsunamiAlert(alertLevel) {
+                try {
+                    console.log(`🧪 津波警報テスト開始: ${alertLevel}`);
+                    
+                    // 新しい音声システムを使用
+                    if (window.audioAlertSystem) {
+                        const success = await window.audioAlertSystem.playAlert(alertLevel);
+                        
+                        if (success) {
+                            const levelNames = {
+                                'advisory': '津波注意報',
+                                'warning': '津波警報', 
+                                'major_warning': '大津波警報'
+                            };
+                            
+                            this.addActivityFeedItem('🌊', `${levelNames[alertLevel]}の音声テストを実行しました`, new Date());
+                            
+                            // テスト通知も表示
+                            if (Notification.permission === 'granted') {
+                                const titles = {
+                                    'advisory': '📢 津波注意報（テスト）',
+                                    'warning': '⚠️ 津波警報（テスト）',
+                                    'major_warning': '🚨 大津波警報（テスト）'
+                                };
+                                
+                                new Notification(titles[alertLevel], {
+                                    body: 'これはテスト通知です。実際の津波情報ではありません。',
+                                    icon: '/favicon.ico',
+                                    tag: `tsunami_test_${alertLevel}`
+                                });
+                            }
+                        } else {
+                            throw new Error('音声システムが利用できません');
+                        }
+                    } else {
+                        // フォールバック
+                        await this.playAlertSound(1);
+                        this.addActivityFeedItem('🌊', '津波警報テスト（フォールバック）を実行しました', new Date());
+                    }
+                    
+                } catch (error) {
+                    console.error('津波警報テスト失敗:', error);
+                    alert(`津波警報テストに失敗しました: ${error.message}`);
+                }
+            }
+            
+            stopAllSounds() {
+                try {
+                    console.log('🔇 全音声停止要求');
+                    
+                    // 新しい音声システムを使用
+                    if (window.audioAlertSystem) {
+                        window.audioAlertSystem.stopAllAlerts();
+                        this.addActivityFeedItem('🔇', '全ての音声を停止しました', new Date());
+                        console.log('✅ 全音声停止完了');
+                    } else {
+                        console.warn('⚠️ 音声システムが利用できません');
+                        this.addActivityFeedItem('⚠️', '音声システムが利用できません', new Date());
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ 音声停止エラー:', error);
+                    this.addActivityFeedItem('❌', `音声停止エラー: ${error.message}`, new Date());
+                }
             }
             
             toggleActivityFeed() {
