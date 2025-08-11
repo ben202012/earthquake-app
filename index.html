@@ -1612,6 +1612,17 @@
                 this.map = null;
                 this.websocket = null;
                 
+                // メモリリーク対策: インターバルIDを管理
+                this.intervals = {
+                    clock: null,
+                    fallback: null,
+                    performance: null,
+                    systemMonitor: null,
+                    tsunamiMonitor: null,
+                    rssUpdate: null,
+                    historyUpdate: null
+                };
+                
                 // 設定データ
                 this.settings = this.loadSettings();
                 
@@ -1749,7 +1760,7 @@
                 };
                 
                 updateClock();
-                setInterval(updateClock, 1000);
+                this.intervals.clock = setInterval(updateClock, 1000);
                 
                 // システム開始時刻を記録
                 const systemStartTimeEl = document.getElementById('system-start-time');
@@ -2930,7 +2941,7 @@
                 this.loadHistoricalData();
                 
                 // 30秒間隔で履歴データを更新
-                this.fallbackInterval = setInterval(() => {
+                this.intervals.fallback = setInterval(() => {
                     this.loadHistoricalData();
                 }, 30000);
                 
@@ -2945,9 +2956,10 @@
                     
                     this.fallbackMode = false;
                     
-                    if (this.fallbackInterval) {
-                        clearInterval(this.fallbackInterval);
-                        this.fallbackInterval = null;
+                    // メモリリーク対策: インターバルを適切にクリーンアップ
+                    if (this.intervals.fallback) {
+                        clearInterval(this.intervals.fallback);
+                        this.intervals.fallback = null;
                     }
                 }
             }
@@ -3408,7 +3420,7 @@
             }
 
             startPerformanceMonitoring() {
-                setInterval(() => {
+                this.intervals.performance = setInterval(() => {
                     // メモリ使用量の監視
                     if (performance.memory) {
                         const memoryUsageEl = document.getElementById('memory-usage');
@@ -3974,10 +3986,10 @@
                 });
                 
                 // 定期的なシステム状態チェック（30秒間隔）
-                if (this.systemMonitorInterval) {
-                    clearInterval(this.systemMonitorInterval);
+                if (this.intervals.systemMonitor) {
+                    clearInterval(this.intervals.systemMonitor);
                 }
-                this.systemMonitorInterval = setInterval(() => {
+                this.intervals.systemMonitor = setInterval(() => {
                     this.updateSystemStatusSilently();
                 }, 30000);
                 
@@ -4785,7 +4797,7 @@
              */
             enhanceRealTimeMonitoring() {
                 // より頻繁なデータ更新
-                setInterval(() => {
+                this.intervals.tsunamiMonitor = setInterval(() => {
                     this.checkCriticalTsunamiUpdates();
                 }, 30000); // 30秒毎
                 
@@ -5525,7 +5537,7 @@
                 // Yahoo!天気の津波情報RSS (公開API)
                 const rssUrl = 'https://rss-weather.yahoo.co.jp/rss/days/tsunami.xml';
                 
-                setInterval(async () => {
+                this.intervals.rssUpdate = setInterval(async () => {
                     try {
                         // プロキシ経由でRSS取得
                         const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`);
@@ -5657,7 +5669,7 @@
                 
                 // 履歴データを定期更新
                 this.updateTsunamiHistory();
-                setInterval(() => this.updateTsunamiHistory(), 30000);
+                this.intervals.historyUpdate = setInterval(() => this.updateTsunamiHistory(), 30000);
             }
             
             /**
@@ -6130,6 +6142,48 @@
                 // 簡易実装: コンソール出力のみ (30%版)
                 // 将来的にはUI通知を実装
             }
+            
+            /**
+             * メモリリーク対策: システム全体のクリーンアップ
+             */
+            cleanup() {
+                console.log('🧹 システムクリーンアップ開始');
+                
+                // 全インターバルをクリーンアップ
+                Object.keys(this.intervals).forEach(key => {
+                    if (this.intervals[key]) {
+                        clearInterval(this.intervals[key]);
+                        this.intervals[key] = null;
+                        console.log(`✅ ${key} インターバルをクリーンアップ`);
+                    }
+                });
+                
+                // WebSocket接続をクリーンアップ
+                if (this.websocket) {
+                    this.websocket.close();
+                    this.websocket = null;
+                    console.log('✅ WebSocket接続をクリーンアップ');
+                }
+                
+                // 地図イベントリスナーをクリーンアップ
+                if (this.map) {
+                    this.map.off(); // 全イベントリスナーを削除
+                    console.log('✅ 地図イベントリスナーをクリーンアップ');
+                }
+                
+                // 旧プロパティのクリーンアップ（互換性維持）
+                if (this.fallbackInterval) {
+                    clearInterval(this.fallbackInterval);
+                    this.fallbackInterval = null;
+                }
+                
+                if (this.systemMonitorInterval) {
+                    clearInterval(this.systemMonitorInterval);
+                    this.systemMonitorInterval = null;
+                }
+                
+                console.log('✅ システムクリーンアップ完了');
+            }
         }
 
         // グローバル関数
@@ -6234,6 +6288,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             window.monitor = new ProfessionalEarthquakeMonitor();
         });
+        
+        // メモリリーク対策: ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (window.monitor) {
+                window.monitor.cleanup();
+            }
+        });
+        
         // 本番環境用初期化完了
     </script>
 </body>
