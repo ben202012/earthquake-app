@@ -1990,7 +1990,7 @@
                 const nightModeBtn = document.createElement('button');
                 nightModeBtn.id = 'night-mode-toggle';
                 nightModeBtn.className = 'settings-btn';
-                nightModeBtn.innerHTML = '🌙 夜間モード';
+                nightModeBtn.textContent = '🌙 夜間モード';
                 nightModeBtn.title = '地図を暗めに調整';
                 
                 nightModeBtn.onclick = () => {
@@ -2014,7 +2014,7 @@
                     // 明度調整機能を使って70%に設定（夜間モード）
                     this.updateMapBrightness(70);
                     if (nightModeBtn) {
-                        nightModeBtn.innerHTML = '☀️ 標準表示';
+                        nightModeBtn.textContent = '☀️ 標準表示';
                         nightModeBtn.title = '明るい表示に戻す';
                     }
                     this.nightModeEnabled = true;
@@ -2022,7 +2022,7 @@
                     // 明度調整機能を使って100%に設定（標準表示）
                     this.updateMapBrightness(100);
                     if (nightModeBtn) {
-                        nightModeBtn.innerHTML = '🌙 夜間モード';
+                        nightModeBtn.textContent = '🌙 夜間モード';
                         nightModeBtn.title = '地図を暗めに調整';
                     }
                     this.nightModeEnabled = false;
@@ -3017,16 +3017,42 @@
                     return;
                 }
 
-                container.innerHTML = this.earthquakeHistory.map(eq => `
-                    <div class="earthquake-item fade-in" onclick="selectEarthquake('${eq.id}')">
-                        <div class="earthquake-header">
-                            <span class="magnitude">M${eq.magnitude.toFixed(1)}</span>
-                            <span class="intensity">震度${eq.maxIntensity}</span>
-                        </div>
-                        <div class="earthquake-location">${eq.location}</div>
-                        <div class="earthquake-time">${eq.time.toLocaleString('ja-JP')}</div>
-                    </div>
-                `).join('');
+                // XSS対策: innerHTML の代わりに安全な DOM 操作を使用
+                container.textContent = ''; // 既存要素をクリア
+                
+                this.earthquakeHistory.forEach(eq => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'earthquake-item fade-in';
+                    itemDiv.onclick = () => selectEarthquake(eq.id);
+                    
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'earthquake-header';
+                    
+                    const magnitudeSpan = document.createElement('span');
+                    magnitudeSpan.className = 'magnitude';
+                    magnitudeSpan.textContent = `M${eq.magnitude.toFixed(1)}`;
+                    
+                    const intensitySpan = document.createElement('span');
+                    intensitySpan.className = 'intensity';
+                    intensitySpan.textContent = `震度${eq.maxIntensity}`;
+                    
+                    headerDiv.appendChild(magnitudeSpan);
+                    headerDiv.appendChild(intensitySpan);
+                    
+                    const locationDiv = document.createElement('div');
+                    locationDiv.className = 'earthquake-location';
+                    locationDiv.textContent = eq.location;
+                    
+                    const timeDiv = document.createElement('div');
+                    timeDiv.className = 'earthquake-time';
+                    timeDiv.textContent = eq.time.toLocaleString('ja-JP');
+                    
+                    itemDiv.appendChild(headerDiv);
+                    itemDiv.appendChild(locationDiv);
+                    itemDiv.appendChild(timeDiv);
+                    
+                    container.appendChild(itemDiv);
+                });
             }
 
             updateMapMarkers() {
@@ -3199,28 +3225,61 @@
             }
             
             updateActivityFeedDisplay(container) {
+                // XSS対策: innerHTML の代わりに安全な DOM 操作を使用
+                container.textContent = ''; // 既存要素をクリア
+                
                 if (!this.activityLog || this.activityLog.length === 0) {
-                    container.innerHTML = `
-                        <div class="feed-item">
-                            <div class="feed-icon">🟢</div>
-                            <div class="feed-content">
-                                <div class="feed-text">システムが開始されました</div>
-                                <div class="feed-time">${this.startTime.toLocaleTimeString('ja-JP')}</div>
-                            </div>
-                        </div>
-                    `;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'feed-item';
+                    
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'feed-icon';
+                    iconDiv.textContent = '🟢';
+                    
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'feed-content';
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'feed-text';
+                    textDiv.textContent = 'システムが開始されました';
+                    
+                    const timeDiv = document.createElement('div');
+                    timeDiv.className = 'feed-time';
+                    timeDiv.textContent = this.startTime.toLocaleTimeString('ja-JP');
+                    
+                    contentDiv.appendChild(textDiv);
+                    contentDiv.appendChild(timeDiv);
+                    itemDiv.appendChild(iconDiv);
+                    itemDiv.appendChild(contentDiv);
+                    container.appendChild(itemDiv);
                     return;
                 }
                 
-                container.innerHTML = this.activityLog.map(log => `
-                    <div class="feed-item">
-                        <div class="feed-icon">${log.icon}</div>
-                        <div class="feed-content">
-                            <div class="feed-text">${log.text}</div>
-                            <div class="feed-time">${log.time.toLocaleTimeString('ja-JP')}</div>
-                        </div>
-                    </div>
-                `).join('');
+                this.activityLog.forEach(log => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'feed-item';
+                    
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'feed-icon';
+                    iconDiv.textContent = log.icon;
+                    
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'feed-content';
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'feed-text';
+                    textDiv.textContent = log.text;
+                    
+                    const timeDiv = document.createElement('div');
+                    timeDiv.className = 'feed-time';
+                    timeDiv.textContent = log.time.toLocaleTimeString('ja-JP');
+                    
+                    contentDiv.appendChild(textDiv);
+                    contentDiv.appendChild(timeDiv);
+                    itemDiv.appendChild(iconDiv);
+                    itemDiv.appendChild(contentDiv);
+                    container.appendChild(itemDiv);
+                });
             }
 
             async loadHistoricalData() {
@@ -6083,18 +6142,34 @@
             // 既存の地域アイテムをクリア
             tsunamiRegionsContainer.innerHTML = '';
             
-            // アクティブな地域のみを表示
+            // アクティブな地域のみを表示 - XSS対策: 安全なDOM操作を使用
             activeAreas.forEach(feature => {
                 const props = feature.properties;
                 const regionItem = document.createElement('div');
                 regionItem.className = 'region-item advisory';
-                regionItem.innerHTML = `
-                    <div class="region-name">${props.AREA_NAME}</div>
-                    <div class="region-info">
-                        <span class="wave-height">${props.WAVE_HEIGHT || '1m'}</span>
-                        <span class="arrival-time">${props.ARRIVAL_TIME || '既に到達と推定'}</span>
-                    </div>
-                `;
+                
+                // 地域名
+                const regionName = document.createElement('div');
+                regionName.className = 'region-name';
+                regionName.textContent = props.AREA_NAME || '';
+                
+                // 地域情報
+                const regionInfo = document.createElement('div');
+                regionInfo.className = 'region-info';
+                
+                const waveHeight = document.createElement('span');
+                waveHeight.className = 'wave-height';
+                waveHeight.textContent = props.WAVE_HEIGHT || '1m';
+                
+                const arrivalTime = document.createElement('span');
+                arrivalTime.className = 'arrival-time';
+                arrivalTime.textContent = props.ARRIVAL_TIME || '既に到達と推定';
+                
+                regionInfo.appendChild(waveHeight);
+                regionInfo.appendChild(arrivalTime);
+                regionItem.appendChild(regionName);
+                regionItem.appendChild(regionInfo);
+                
                 tsunamiRegionsContainer.appendChild(regionItem);
             });
             
