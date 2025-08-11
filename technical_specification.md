@@ -1,14 +1,14 @@
-# 🌏 地震監視システム v3.1 - 実用機能95%達成版 技術仕様書（セキュリティ強化）
+# 🌏 地震監視システム v3.1 - 実用機能60%達成版 技術仕様書（セキュリティ強化）
 
 ## 1. システム概要
 
-**🎯 実用機能達成度: 95%完了 (セキュリティ強化版)**
+**🎯 実用機能達成度: 60%完了 (セキュリティ強化版)**
 
-### 1.1 実用機能95%達成アーキテクチャ図（セキュリティ強化版）
+### 1.1 実用機能60%達成アーキテクチャ図（セキュリティ強化版）
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                高度津波監視統合システム v3.1                         │
-│                   🎯 実用機能95%達成（セキュリティ強化）             │
+│                   🎯 実用機能60%達成（セキュリティ強化）             │
 │                                                                     │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐ │
 │  │   津波予測      │  │  多地点連携     │  │  Web Audio API      │ │
@@ -56,10 +56,10 @@
 - **音声システム**: Web Audio API（完全プログラマティック実装）
 - **CORS対応**: Node.js専用プロキシサーバー（リダイレクト・エラー処理完備）
 - **多地点検証**: 国際データソース統合（USGS+JMA+NOAA完全稼働）
-- **津波予測**: 科学的アルゴリズム（Mansinha-Smylie式、Green's Law）
+- **津波評価**: 基本リスク判定（簡易距離計算・経験的津波速度・手動更新）
 - **緊急対応**: 位置情報ベース避難誘導+音声案内
 - **通信システム**: WebSocket + CORS対応Node.jsサーバー
-- **予測エンジン**: 物理ベース津波計算（18箇所沿岸部）
+- **評価システム**: 基本津波リスク判定（7箇所主要沿岸部・リアルタイム機能未実装）
 
 ## 2. システム構成
 
@@ -72,19 +72,25 @@ index.html              # Professional Dashboard (Main App)
 index-new.html          # Modular Architecture Version
 styles.css              # Legacy styles (for compatibility)
 
-# Core Architecture (v2.0)
-src/
-├── core/
-│   ├── EventBus.js         # Central Event Management System
-│   ├── BaseComponent.js    # Base class for all UI components
-│   └── App.js             # Main Application Controller
-├── components/
-│   └── panels/
-│       └── P2PPanel.js     # P2P Earthquake Information Panel
-├── models/
-│   └── Earthquake.js       # Earthquake Data Model & Validation
-└── styles/
-    └── components.css      # Professional Component Styles
+# Actual File Structure (v3.1)
+Jisin -App/
+├── index.html                    # メインアプリケーション
+├── server.js                     # Node.js専用サーバー  
+├── config.js                     # システム設定
+├── app-config.js                 # アプリケーション設定管理
+├── error-handler.js              # 統一エラーハンドリング
+├── timer-manager.js              # タイマー管理システム
+├── data-validator.js             # データ検証システム
+├── utils.js                      # 共通ユーティリティ
+├── audio-alert-system.js         # 音声警報システム
+├── tsunami-alert-system.js       # 津波警報システム
+├── tsunami-data-store.js         # データ永続化
+├── tsunami-manager.js            # 津波状態管理
+├── jma-tsunami-loader.js         # 津波データローダー
+├── jma-xml-client.js             # JMA XMLクライアント
+├── jma-data-converter.js         # データ変換
+├── multi-site-verification.js    # 多地点検証システム
+└── security-config.js            # セキュリティ設定
 
 # Legacy Files (v1.0 compatibility)
 test.html               # Test & Debug Interface
@@ -513,59 +519,24 @@ dashboardStats: {
 - **詳細ログ**: アクション実行結果の時系列表示
 - **包括的テスト**: 接続、通知、音声、設定、地震シミュレート、モーダルの全機能テスト
 
-### 11.4 固定強震モニタパネル
+### 11.4 将来実装予定機能
 
-#### 11.4.1 パネル構造
-```html
-<div class="fixed-kmoni-panel" id="fixed-kmoni-panel">
-  <div class="kmoni-header"> <!-- ドラッグ可能ヘッダー -->
-    <div class="kmoni-title">📊 強震モニタ</div>
-    <div class="kmoni-controls">
-      <button id="kmoni-refresh">🔄</button>    <!-- 更新 -->
-      <button id="kmoni-minimize">➖</button>   <!-- 最小化 -->
-      <button id="kmoni-close">✕</button>      <!-- 閉じる -->
-    </div>
-  </div>
-  <div class="kmoni-content">
-    <iframe src="http://www.kmoni.bosai.go.jp"></iframe>
-  </div>
-  <div class="kmoni-status">URL表示</div>
-</div>
-```
+#### 11.4.1 強震モニタ統合（未実装）
+- 外部の強震モニタサイトとの統合機能
+- リアルタイム震度表示パネル
+- ドラッグ&ドロップ対応の浮動パネル
 
-#### 11.4.2 パネル機能
-```javascript
-class FixedKmoniPanel {
-  constructor() {
-    this.isVisible = true;
-    this.isMinimized = false;
-    this.isDragging = false;
-  }
-  
-  // 主要メソッド
-  loadKmoni()      // 強震モニタiframe読み込み
-  refreshKmoni()   // パネル更新（回転アニメーション付き）
-  toggleMinimize() // 最小化/復元切り替え
-  startDrag(e)     // ドラッグ開始
-  drag(e)          // ドラッグ中（境界制御付き）
-  endDrag()        // ドラッグ終了
-}
-```
+#### 11.4.2 高度津波予測エンジン（未実装）
+- Mansinha-Smylie式による科学的津波予測
+- 18箇所沿岸部への詳細予測計算
+- Green's Law適用の物理ベース計算
 
-#### 11.4.3 CSS仕様
-```css
-.fixed-kmoni-panel {
-  position: fixed;
-  top: 90px; right: 20px;
-  width: 400px; height: 300px;
-  z-index: 9999;
-  resize: both; /* リサイズ可能 */
-  min-width: 300px; max-width: 600px;
-  min-height: 200px; max-height: 500px;
-  backdrop-filter: blur(15px);
-  border-radius: 12px;
-}
-```
+#### 11.4.3 現在の津波機能の制限事項
+- リアルタイム津波監視は無効（`enableRealtime: false`）
+- 自動更新機能は未実装（手動更新のみ）
+- 気象庁XML統合はCORS制限により部分実装
+- 津波予測計算エンジンは将来実装予定
+- 現在は基本的なリスク評価のみ提供（30%完成）
 
 ## 12. 統合設定パネル技術仕様 (v2.0新機能)
 
@@ -1141,7 +1112,7 @@ class Utils {
 ---
 
 **最終更新**: 2024年12月19日  
-**完成度**: **95%達成** (セキュリティ強化完了)  
+**完成度**: **60%達成** (セキュリティ強化完了)  
 **バージョン**: 3.1.0 セキュリティ強化版津波監視システム  
 **アーキテクチャ**: セキュリティ強化 + Professional Component-based Design  
 **技術仕様**: エンタープライズレベル実装完了 + セキュリティ対策完備  

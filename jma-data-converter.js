@@ -7,7 +7,7 @@ class JMADataConverter {
     constructor() {
         this.config = {
             // 気象庁津波予報区データURL
-            JMA_TSUNAMI_SHAPEFILE_URL: 'https://www.data.jma.go.jp/developer/gis/data/20240520_AreaTsunami_GIS.zip',
+            // JMA_TSUNAMI_SHAPEFILE_URL: 'https://www.data.jma.go.jp/developer/gis/data/20240520_AreaTsunami_GIS.zip', // 削除済み
             
             // 変換設定
             SIMPLIFICATION_LEVEL: 0.01,    // 簡略化レベル (1% = 大幅圧縮)
