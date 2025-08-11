@@ -3,6 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const crypto = require('crypto');
 
 // セキュリティ設定の読み込み
 let SECURITY_CONFIG;
@@ -26,6 +27,14 @@ try {
 }
 
 const port = 8080;
+
+/**
+ * セキュアなnonce生成関数
+ * CSP (Content Security Policy) で使用するランダムな値を生成
+ */
+function generateNonce() {
+    return crypto.randomBytes(16).toString('base64');
+}
 
 const mimeTypes = {
     '.html': 'text/html',
@@ -116,9 +125,20 @@ function createSafeErrorResponse(error, context = {}) {
  * セキュリティヘッダーを設定する関数
  * XSS、クリックジャッキング、MIMEタイプ偽装等を防御
  */
-function setSecurityHeaders(req, res) {
+function setSecurityHeaders(req, res, nonce = null) {
     // Content Security Policy (CSP) - XSS攻撃を防ぐ
-    const cspDirectives = SECURITY_CONFIG.headers.contentSecurityPolicy.directives;
+    const cspDirectives = { ...SECURITY_CONFIG.headers.contentSecurityPolicy.directives };
+    
+    // nonceが提供された場合、script-srcとstyle-srcを動的に更新
+    if (nonce) {
+        // テスト環境では unsafe-inline を保持し、nonce も追加
+        cspDirectives.scriptSrc = cspDirectives.scriptSrc
+            .concat([`'nonce-${nonce}'`]);
+        
+        cspDirectives.styleSrc = cspDirectives.styleSrc
+            .concat([`'nonce-${nonce}'`]);
+    }
+    
     const cspString = Object.entries(cspDirectives)
         .map(([directive, sources]) => {
             const directiveName = directive.replace(/([A-Z])/g, '-$1').toLowerCase();
@@ -281,8 +301,10 @@ const server = http.createServer((req, res) => {
     
     // 安全なCORSヘッダーを設定
     setSafeCORSHeaders(req, res);
-    // セキュリティヘッダーを設定
-    setSecurityHeaders(req, res);
+    // セキュリティヘッダーを設定（HTMLファイル以外はnonce不要）
+    if (!pathname.endsWith('.html')) {
+        setSecurityHeaders(req, res);
+    }
     
     if (req.method === 'OPTIONS') {
         res.writeHead(200);
@@ -366,7 +388,7 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath);
     const mimeType = mimeTypes[ext] || 'text/plain';
     
-    fs.readFile(filePath, (err, data) => {
+    fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
             if (err.code === 'ENOENT') {
                 res.writeHead(404, { 'Content-Type': 'text/html' });
@@ -383,13 +405,26 @@ const server = http.createServer((req, res) => {
                 res.end('<h1>500 - サーバーエラー</h1>');
             }
         } else {
-            // 静的ファイル配信時もセキュリティヘッダーを設定
+            let responseData = data;
+            let nonce = null;
+            
+            // HTMLファイルの場合の処理（一時的にnonce生成を無効化）
+            if (ext === '.html') {
+                // テスト環境ではnonce生成を無効にして、unsafe-inlineを使用
+                console.log(`📄 HTMLファイル配信 (${pathname}): nonce無効モード`);
+                // nonce = generateNonce(); // 一時的に無効化
+            }
+            
+            // セキュリティヘッダーを設定（nonceを含む）
+            setSecurityHeaders(req, res, nonce);
+            
+            // 静的ファイル配信
             res.writeHead(200, { 
                 'Content-Type': mimeType,
                 // 追加のセキュリティヘッダー（既に設定済みだが念のため）
                 'X-Content-Type-Options': 'nosniff'
             });
-            res.end(data);
+            res.end(responseData);
         }
     });
 });

@@ -1368,7 +1368,7 @@
                     <div class="status-indicator">
                         <div class="status-dot" id="p2p-status"></div>
                         P2P接続
-                        <button id="reconnect-btn" class="reconnect-btn" onclick="monitor.reconnectWebSocket()" title="手動で再接続">
+                        <button id="reconnect-btn" class="reconnect-btn" title="手動で再接続">
                             🔄
                         </button>
                     </div>
@@ -1381,7 +1381,7 @@
             
             <div class="header-right">
                 <div class="current-time" id="current-time">--:--:--</div>
-                <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
+                <button class="settings-btn" id="settings-btn">⚙️ 設定</button>
             </div>
         </header>
         
@@ -3836,11 +3836,145 @@
                 // アクティビティログに記録
                 this.addActivityFeedItem('⚙️', 'システム設定を開きました', new Date());
                 
+                // DOM構築完了後にイベントハンドラーを設定（CSP nonce対応）
+                setTimeout(() => {
+                    this.setupSettingsPanelEventHandlers();
+                    // 全てのセクションを確実に折りたたんだ状態にする
+                    this.ensureAllSectionsCollapsed();
+                }, 50);
+                
                 // システム状態モニターを初期化
                 setTimeout(() => {
                     this.initializeSystemMonitor();
                     this.refreshSystemStatus();
                 }, 500);
+            }
+            
+            /**
+             * 設定パネルのイベントハンドラーを設定（CSP nonce対応）
+             */
+            setupSettingsPanelEventHandlers() {
+                // 設定パネルの閉じるボタン
+                const closeBtn = document.querySelector('#settings-panel .popup-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => this.closeSettingsPanel());
+                }
+                
+                // セクション切り替えボタンの個別設定
+                const sectionTitleButtons = document.querySelectorAll('.settings-section-title');
+                sectionTitleButtons.forEach(button => {
+                    const onclickAttr = button.getAttribute('onclick');
+                    if (onclickAttr) {
+                        button.removeAttribute('onclick');
+                        // onclick属性から対応するメソッドを特定して設定
+                        if (onclickAttr.includes('toggleActivityFeed')) {
+                            button.addEventListener('click', () => this.toggleActivityFeed());
+                        } else if (onclickAttr.includes('toggleBrightnessSettings')) {
+                            button.addEventListener('click', () => this.toggleBrightnessSettings());
+                        } else if (onclickAttr.includes('toggleNotificationSettings')) {
+                            button.addEventListener('click', () => this.toggleNotificationSettings());
+                        } else if (onclickAttr.includes('toggleTestToolsSettings')) {
+                            button.addEventListener('click', () => this.toggleTestToolsSettings());
+                        }
+                    }
+                });
+                
+                // テストボタン群
+                const testButtons = [
+                    { selector: '[onclick*="testNotification"]', handler: () => this.testNotification() },
+                    { selector: '[onclick*="testSound"]', handler: () => this.testSound() },
+                    { selector: '[onclick*="testTsunamiAlert(\'advisory\')"]', handler: () => this.testTsunamiAlert('advisory') },
+                    { selector: '[onclick*="testTsunamiAlert(\'warning\')"]', handler: () => this.testTsunamiAlert('warning') },
+                    { selector: '[onclick*="testTsunamiAlert(\'major_warning\')"]', handler: () => this.testTsunamiAlert('major_warning') },
+                    { selector: '[onclick*="stopAllSounds"]', handler: () => this.stopAllSounds() }
+                ];
+                
+                testButtons.forEach(({ selector, handler }) => {
+                    const button = document.querySelector(selector);
+                    if (button) {
+                        button.removeAttribute('onclick');
+                        button.addEventListener('click', handler);
+                    }
+                });
+                
+                // プリセットボタン
+                const presetButtons = document.querySelectorAll('.preset-btn');
+                presetButtons.forEach(button => {
+                    const onclickAttr = button.getAttribute('onclick');
+                    if (onclickAttr) {
+                        button.removeAttribute('onclick');
+                        const brightness = onclickAttr.match(/setBrightness\((\d+)\)/);
+                        if (brightness) {
+                            button.addEventListener('click', () => this.setBrightness(parseInt(brightness[1])));
+                        }
+                    }
+                });
+                
+                // システム診断ボタン群
+                const systemButtons = [
+                    { selector: '[onclick*="refreshSystemStatus"]', handler: () => this.refreshSystemStatus() },
+                    { selector: '[onclick*="quickConnectionCheck"]', handler: () => this.quickConnectionCheck() },
+                    { selector: '[onclick*="quickAudioCheck"]', handler: () => this.quickAudioCheck() },
+                    { selector: '[onclick*="clearSystemStatus"]', handler: () => this.clearSystemStatus() },
+                    { selector: '[onclick*="clearErrorLog"]', handler: () => this.clearErrorLog() },
+                    { selector: '[onclick*="exportSystemReport"]', handler: () => this.exportSystemReport() }
+                ];
+                
+                systemButtons.forEach(({ selector, handler }) => {
+                    const button = document.querySelector(selector);
+                    if (button) {
+                        button.removeAttribute('onclick');
+                        button.addEventListener('click', handler);
+                    }
+                });
+                
+                // テストツールボタン群（より確実な検索）
+                const testToolButtons = document.querySelectorAll('#settings-test-tools .test-tool-btn');
+                console.log(`🔍 テストツールボタン検出: ${testToolButtons.length}個`);
+                
+                testToolButtons.forEach((button, index) => {
+                    const onclickAttr = button.getAttribute('onclick');
+                    console.log(`🔧 テストツールボタン ${index + 1}: onclick="${onclickAttr}"`);
+                    
+                    if (onclickAttr) {
+                        button.removeAttribute('onclick');
+                        const toolMatch = onclickAttr.match(/openTestTool\('([^']+)'\)/);
+                        if (toolMatch) {
+                            const toolName = toolMatch[1];
+                            button.addEventListener('click', () => {
+                                console.log(`🧪 テストツール起動: ${toolName}`);
+                                this.openTestTool(toolName);
+                            });
+                            console.log(`✅ テストツールボタン設定完了: ${toolName}`);
+                        }
+                    }
+                });
+                
+                console.log('✅ 設定パネルのイベントハンドラー設定完了');
+            }
+            
+            /**
+             * 全ての設定セクションを折りたたんだ状態にする
+             */
+            ensureAllSectionsCollapsed() {
+                const sections = [
+                    { containerId: 'settings-activity-feed', toggleId: 'activity-feed-toggle' },
+                    { containerId: 'settings-brightness', toggleId: 'brightness-settings-toggle' },
+                    { containerId: 'settings-notification', toggleId: 'notification-settings-toggle' },
+                    { containerId: 'settings-test-tools', toggleId: 'test-tools-settings-toggle' }
+                ];
+                
+                sections.forEach(({ containerId, toggleId }) => {
+                    const container = document.getElementById(containerId);
+                    const toggle = document.getElementById(toggleId);
+                    
+                    if (container && toggle) {
+                        container.style.display = 'none';
+                        toggle.textContent = '▶';
+                    }
+                });
+                
+                console.log('📋 全ての設定セクションを折りたたみました');
             }
             
             toggleNotificationSettings() {
@@ -6305,23 +6439,10 @@
             }
         }
 
-        function openSettings() {
-            window.monitor.showSettingsPanel();
-        }
-
-        // アプリケーション開始
-        document.addEventListener('DOMContentLoaded', () => {
-            window.monitor = new ProfessionalEarthquakeMonitor();
-        });
-        
-        // メモリリーク対策: ページ離脱時のクリーンアップ
-        window.addEventListener('beforeunload', () => {
-            if (window.monitor) {
-                window.monitor.cleanup();
-            }
-        });
-        
         // 本番環境用初期化完了
+        console.log('✅ ProfessionalEarthquakeMonitorクラス定義完了');
     </script>
+    <!-- セキュア初期化スクリプト（外部ファイル） -->
+    <script src="main.js"></script>
 </body>
 </html>
