@@ -7,7 +7,7 @@ const url = require('url');
 // セキュリティ設定の読み込み
 let SECURITY_CONFIG;
 try {
-    SECURITY_CONFIG = require('./security-config.js');
+    SECURITY_CONFIG = require('./src/config/security-config.js');
     console.log('✅ セキュリティ設定ファイルを読み込みました');
 } catch (error) {
     console.warn('⚠️ セキュリティ設定ファイルが見つかりません。デフォルト設定を使用します。');
@@ -294,45 +294,35 @@ const server = http.createServer((req, res) => {
     if (pathname.startsWith('/api/proxy/')) {
         const apiId = pathname.replace('/api/proxy/', '');
         
-        // JMA専用プロキシエンドポイント（セキュリティ強化）
-        if (apiId === 'jma' && parsedUrl.query.url) {
-            const targetUrl = decodeURIComponent(parsedUrl.query.url);
-            
-            // JMAドメインのみ許可（セキュリティ対策）
-            const allowedDomains = [
-                'www.jma.go.jp',
-                'api.p2pquake.net',
-                'earthquake.usgs.gov'
-            ];
-            
-            try {
-                const urlObj = new URL(targetUrl);
-                if (allowedDomains.includes(urlObj.hostname)) {
-                    proxyRequest(targetUrl, req, res);
-                } else {
-                    res.writeHead(403, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        error: 'Forbidden domain',
-                        message: '許可されていないドメインです'
-                    }));
-                }
-            } catch (error) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    error: 'Invalid URL',
-                    message: '無効なURLです'
-                }));
-            }
-            return;
-        }
-        
         // 一般的な外部API
         if (externalAPIs[apiId]) {
             proxyRequest(externalAPIs[apiId], req, res);
             return;
         }
         
-        // 重複処理を削除（上記のJMA専用プロキシで処理済み）
+        // JMAXMLClient専用のセキュアプロキシ
+        if (apiId === 'jma' && parsedUrl.query.url) {
+            const targetUrl = decodeURIComponent(parsedUrl.query.url);
+            
+            // JMA XMLエンドポイントのみ許可（セキュリティ強化）
+            const isJmaXmlUrl = Object.values(jmaXmlAPIs).some(baseUrl => 
+                targetUrl.startsWith(baseUrl)
+            );
+            
+            if (isJmaXmlUrl) {
+                console.log(`🔄 JMA XML セキュアプロキシ: ${targetUrl}`);
+                proxyRequest(targetUrl, req, res);
+                return;
+            } else {
+                const safeError = createSafeErrorResponse(
+                    new Error('許可されていないJMA URLです'),
+                    { method: req.method, url: targetUrl }
+                );
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(safeError));
+                return;
+            }
+        }
         
         // 該当するAPIが見つからない場合
         const safeError = createSafeErrorResponse(

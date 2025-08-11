@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地震監視システム - Professional Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        /* === プロフェッショナル地震監視システム CSS === */
+        
+        /* リセット & 基本設定 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100vh;
+            font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0c1623 0%, #1a2332 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        /* === メインレイアウト === */
+        .earthquake-dashboard {
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            grid-template-rows: 70px 1fr;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main rightpanel";
+            height: 100vh;
+            gap: 1px;
+            background: #0a0f1a;
+        }
+        
+        /* === ヘッダー === */
+        .main-header {
+            grid-area: header;
+            background: linear-gradient(90deg, #1e2a38 0%, #2d3748 100%);
+            border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .app-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .app-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4757;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.connected {
+            background: #2ed573;
+        }
+        
+        .status-dot.partial {
+            background: #ffa502;
+            animation: pulse 1s infinite;
+        }
+        
+        .reconnect-btn {
+            background: none;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+        
+        .reconnect-btn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(180deg);
+        }
+        
+        .reconnect-btn:active {
+            transform: rotate(180deg) scale(0.9);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .current-time {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a9eff;
+        }
+        
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        /* === サイドバー === */
+        .left-sidebar {
+            grid-area: sidebar;
+            background: linear-gradient(180deg, #1a2332 0%, #2d3748 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a9eff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-icon {
+            font-size: 18px;
+        }
+        
+        /* EEW ステータス */
+        .eew-status {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .eew-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .eew-text {
+            font-size: 14px;
+            color: #ff9ff3;
+        }
+        
+        /* 統計情報 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4a9eff;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        
+        /* 最新地震リスト */
+        .earthquake-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .earthquake-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .earthquake-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(4px);
+        }
+        
+        .earthquake-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .magnitude {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .intensity {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .earthquake-location {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+        
+        .earthquake-time {
+            font-size: 12px;
+            color: #94a3b8;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        /* === メイン地図エリア === */
+        .main-content {
+            grid-area: main;
+            background: #0f1419;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        #earthquake-map {
+            width: 100%;
+            height: 100%;
+            background: #0f1419;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(45, 55, 72, 0.92);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 280px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .overlay-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #74b9ff;
+            margin-bottom: 12px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .coordinate-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .coord-item {
+            text-align: center;
+        }
+        
+        .coord-label {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-bottom: 4px;
+        }
+        
+        .coord-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f7fafc;
+            font-family: 'SF Mono', monospace;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* === 右パネル === */
+        .right-panel {
+            grid-area: rightpanel;
+            background: linear-gradient(180deg, #1a2332 0%, #2d3748 100%);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .live-indicator {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            animation: live-pulse 2s infinite;
+        }
+        
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .monitoring-panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .monitoring-section {
+            margin-bottom: 24px;
+        }
+        
+        .monitoring-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a9eff;
+            margin-bottom: 12px;
+        }
+
+        /* === 津波警報パネル === */
+        .tsunami-warning-panel {
+            background: linear-gradient(135deg, rgba(255, 69, 0, 0.1) 0%, rgba(255, 140, 0, 0.05) 100%);
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .tsunami-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .tsunami-level {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .tsunami-level.major-warning {
+            background: rgba(139, 0, 0, 0.2);
+            border: 1px solid #8B0000;
+            color: #FF6B6B;
+        }
+
+        .tsunami-level.warning {
+            background: rgba(255, 69, 0, 0.2);
+            border: 1px solid #FF4500;
+            color: #FFB347;
+        }
+
+        .tsunami-level.advisory {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid #FFD700;
+            color: #FFFF8C;
+        }
+
+        .level-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .tsunami-level.major-warning .level-indicator {
+            background: #8B0000;
+        }
+
+        .tsunami-level.warning .level-indicator {
+            background: #FF4500;
+        }
+
+        .tsunami-level.advisory .level-indicator {
+            background: #FFD700;
+        }
+
+        .tsunami-time {
+            font-size: 12px;
+            color: #a0a9b8;
+        }
+
+        .tsunami-regions {
+            margin-bottom: 16px;
+        }
+
+        .region-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .region-item.major-warning {
+            border-left-color: #8B0000;
+            background: rgba(139, 0, 0, 0.05);
+        }
+
+        .region-item.warning {
+            border-left-color: #FF4500;
+            background: rgba(255, 69, 0, 0.05);
+        }
+
+        .region-item.advisory {
+            border-left-color: #FFD700;
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .region-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .region-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .wave-height {
+            font-size: 14px;
+            font-weight: 700;
+            color: #4a9eff;
+        }
+
+        .arrival-time {
+            font-size: 11px;
+            color: #a0a9b8;
+        }
+
+        .tsunami-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 6px;
+            color: #4a9eff;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(74, 158, 255, 0.2);
+            border-color: rgba(74, 158, 255, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .real-time-clock {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .clock-display {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4a9eff;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .clock-date {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .metric-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .activity-feed {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .feed-item {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .feed-item:last-child {
+            border-bottom: none;
+        }
+        
+        .feed-icon {
+            font-size: 16px;
+        }
+        
+        .feed-content {
+            flex: 1;
+        }
+        
+        .feed-text {
+            font-size: 13px;
+            color: #ffffff;
+            line-height: 1.4;
+        }
+        
+        .feed-time {
+            font-size: 11px;
+            color: #94a3b8;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        /* 震源位置情報パネル */
+        .earthquake-info-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
+        /* === カスタムスクロールバー === */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            border-radius: 3px;
+        }
+        
+        /* === レスポンシブ対応 === */
+        @media (max-width: 1200px) {
+            .earthquake-dashboard {
+                grid-template-columns: 300px 1fr 350px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .earthquake-dashboard {
+                grid-template-columns: 1fr;
+                grid-template-rows: 70px 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+            
+            .left-sidebar,
+            .right-panel {
+                display: none;
+            }
+        }
+        
+        /* === アニメーション === */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* === 震度情報ポップアップ === */
+        .intensity-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 42, 56, 0.98);
+            border: 2px solid rgba(74, 158, 255, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            max-height: 600px;
+            overflow-y: auto;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            animation: popupSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes popupSlideIn {
+            from { 
+                opacity: 0; 
+                transform: translate(-50%, -60%) scale(0.9); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1); 
+            }
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+        }
+        
+        .popup-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #74b9ff;
+            margin: 0;
+        }
+        
+        .popup-close {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.4);
+            color: #ff6b6b;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .popup-close:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .earthquake-summary {
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #a0aec0;
+            margin-bottom: 4px;
+        }
+        
+        .summary-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f7fafc;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .intensity-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        .intensity-section {
+            margin-bottom: 16px;
+        }
+        
+        .intensity-header {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .intensity-regions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 6px;
+            margin-left: 12px;
+        }
+        
+        .region-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        
+        .region-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(2px);
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            animation: fadeInOverlay 0.3s ease-out;
+        }
+        
+        @keyframes fadeInOverlay {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* === 設定パネル === */
+        .settings-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 42, 56, 0.98);
+            border: 2px solid rgba(74, 158, 255, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 700px;
+            overflow-y: auto;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            animation: popupSlideIn 0.3s ease-out;
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+        }
+        
+        .settings-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #74b9ff;
+            margin: 0;
+        }
+        
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        
+        .settings-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a9eff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .settings-section-title:hover {
+            color: #74b9ff;
+            transform: translateX(2px);
+        }
+        
+        .activity-feed-settings {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .map-layers-settings {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .layer-option {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .layer-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(2px);
+        }
+        
+        .layer-option.active {
+            background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
+            border-color: rgba(74, 158, 255, 0.5);
+            color: white;
+        }
+        
+        .layer-option-name {
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 160px;
+            flex: 1;
+        }
+        
+        .layer-option-status {
+            font-size: 12px;
+            color: #74b9ff;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        .layer-option.active .layer-option-status {
+            color: white;
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 0.3s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* === ローディング状態 === */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(74, 158, 255, 0.3);
+            border-top: 3px solid #4a9eff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        /* Leaflet マップスタイルのカスタマイズ */
+        .leaflet-container {
+            background: #0f1419;
+            border-radius: 8px;
+        }
+        
+        /* ズームコントロールのみにfilterを適用 */
+        .leaflet-control-zoom {
+            filter: invert(1) hue-rotate(180deg);
+        }
+        
+        /* レイヤーコントロールのスタイル - 確実な可視性 */
+        .leaflet-control-layers {
+            background: rgba(30, 42, 56, 0.95) !important;
+            color: white !important;
+            border: 1px solid rgba(74, 158, 255, 0.3) !important;
+            border-radius: 8px !important;
+            backdrop-filter: blur(10px) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 2000 !important;
+            min-width: 180px !important;
+            padding: 8px !important;
+        }
+        
+        .leaflet-control-layers-expanded {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .leaflet-control-layers-list {
+            color: white !important;
+            padding: 8px 0 !important;
+        }
+        
+        .leaflet-control-layers-toggle {
+            background-image: none !important;
+            background-color: rgba(74, 158, 255, 0.9) !important;
+            border-radius: 6px !important;
+            width: 36px !important;
+            height: 36px !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            position: relative !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .leaflet-control-layers-toggle::before {
+            content: '🗺️';
+            color: white !important;
+            font-size: 16px !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            line-height: 1 !important;
+            z-index: 2001 !important;
+            pointer-events: none !important;
+        }
+        
+        .leaflet-control-layers-toggle:hover {
+            background-color: rgba(74, 158, 255, 1) !important;
+            transform: scale(1.05) !important;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: rgba(15, 20, 25, 0.95);
+            color: white;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+        }
+        
+        .leaflet-popup-tip {
+            background: rgba(15, 20, 25, 0.95);
+        }
+        
+        .japan-region-tooltip {
+            background: rgba(74, 158, 255, 0.9) !important;
+            color: white !important;
+            border: 1px solid rgba(74, 158, 255, 0.5) !important;
+            border-radius: 4px !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            padding: 4px 8px !important;
+        }
+        
+        /* 地震マーカーの強調 */
+        .earthquake-marker {
+            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
+        }
+        
+
+        
+        .standard-map-layer {
+            transition: filter 0.5s ease;
+        }
+        
+        .dark-subtle {
+            opacity: 0.95;
+        }
+        
+        /* 地震マーカーの基本スタイル */
+        .earthquake-marker {
+            border: 2px solid rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
+        }
+        
+        /* 津波エリアの標準表示 */
+        .jma-tsunami-area {
+            stroke-width: 2px !important;
+            stroke-opacity: 0.8 !important;
+            fill-opacity: 0.6 !important;
+        }
+        
+        /* 日本都市マーカーの表示 */
+        .japan-city-marker {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        /* マーカーのホバー効果 */
+        .japan-city-marker:hover {
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6));
+        }
+        
+        /* 都市ツールチップのスタイル */
+        .japan-city-tooltip {
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #333333 !important;
+            border: 1px solid #cccccc !important;
+            border-radius: 4px !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            padding: 4px 8px !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        /* レイヤーコントロールのスタイル改善 */
+        .leaflet-control-layers-list {
+            color: white !important;
+        }
+        
+        .leaflet-control-layers-base label {
+            color: white !important;
+            font-weight: 500 !important;
+        }
+        
+        .leaflet-control-layers-base input[type="radio"] {
+            accent-color: #4a9eff !important;
+        }
+        /* === 設定パネルスタイル === */
+        .setting-item {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .setting-description {
+            font-size: 13px;
+            color: #a0aec0;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        
+        .test-tool-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .quick-test-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #74b9ff;
+            margin-bottom: 8px;
+        }
+
+        .setting-input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .setting-input-group input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .setting-input-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #74b9ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .setting-input-group select {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .setting-input-group select option {
+            background: #2d3748;
+            color: #ffffff;
+        }
+
+        .setting-value {
+            min-width: 60px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #74b9ff;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #74b9ff;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .test-button {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 8px;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(116, 185, 255, 0.3);
+        }
+
+        /* === ホームボタンコントロール === */
+        .home-control {
+            transition: all 0.3s ease !important;
+        }
+
+        .home-control:hover {
+            background-color: rgba(74, 158, 255, 1) !important;
+            transform: scale(1.1) !important;
+            box-shadow: 0 2px 8px rgba(74, 158, 255, 0.5) !important;
+        }
+
+        .home-control:active {
+            transform: scale(0.95) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="earthquake-dashboard">
+        <!-- ヘッダー -->
+        <header class="main-header">
+            <div class="header-left">
+                <div class="app-logo">🌏</div>
+                <h1 class="app-title">地震監視システム</h1>
+            </div>
+            
+            <div class="header-center">
+                <div class="connection-status">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="p2p-status"></div>
+                        P2P接続
+                        <button id="reconnect-btn" class="reconnect-btn" onclick="monitor.reconnectWebSocket()" title="手動で再接続">
+                            🔄
+                        </button>
+                    </div>
+                    <div class="status-indicator">
+                        <div class="status-dot" id="api-status"></div>
+                        API接続
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="current-time" id="current-time">--:--:--</div>
+                <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
+            </div>
+        </header>
+        
+        <!-- 左サイドバー -->
+        <aside class="left-sidebar">
+            <!-- EEW ステータス -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span class="section-icon">⚡</span>
+                    緊急地震速報
+                </div>
+                <div class="eew-status">
+                    <div class="eew-icon">📡</div>
+                    <div class="eew-text" id="eew-status">発信なし</div>
+                </div>
+            </div>
+            
+            <!-- 統計情報 -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span class="section-icon">📊</span>
+                    監視統計
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="today-count">0</div>
+                        <div class="stat-label">今日の地震</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="week-count">0</div>
+                        <div class="stat-label">今週の地震</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="max-intensity">-</div>
+                        <div class="stat-label">最大震度</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="response-time">0ms</div>
+                        <div class="stat-label">応答時間</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 最新地震リスト -->
+            <div class="earthquake-list">
+                <div class="section-title">
+                    <span class="section-icon">🔴</span>
+                    最新地震情報
+                </div>
+                <div id="earthquake-history">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">データを読み込み中...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- メイン地図エリア -->
+        <main class="main-content">
+            <div class="map-container">
+                <div id="earthquake-map"></div>
+            </div>
+        </main>
+        
+        <!-- 右パネル -->
+        <aside class="right-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    📡 リアルタイム監視
+                    <span class="live-indicator">LIVE</span>
+                </h2>
+            </div>
+            
+            <div class="monitoring-panel">
+                <!-- リアルタイム時計 -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">システム時刻</div>
+                    <div class="real-time-clock">
+                        <div class="clock-display" id="system-clock">--:--:--</div>
+                        <div class="clock-date" id="system-date">----/--/--</div>
+                    </div>
+                </div>
+                
+                <!-- メトリクス -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">パフォーマンス</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="uptime">00:00:00</div>
+                            <div class="metric-label">稼働時間</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="data-packets">0</div>
+                            <div class="metric-label">受信データ</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="memory-usage">0MB</div>
+                            <div class="metric-label">メモリ使用量</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="active-regions">0</div>
+                            <div class="metric-label">活発地域</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 津波警報パネル -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title" id="tsunami-section-title">🌊 津波警報・注意報</div>
+                    <div class="tsunami-warning-panel">
+                        <div class="tsunami-status">
+                            <div class="tsunami-level advisory" id="tsunami-level">
+                                <div class="level-indicator"></div>
+                                <div class="level-text">津波注意報</div>
+                            </div>
+                            <div class="tsunami-time">発表: 30日20:45 JST</div>
+                        </div>
+                        
+                        <div class="tsunami-regions">
+                            <div class="region-item advisory">
+                                <div class="region-name">北海道太平洋沿岸東部</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">北海道太平洋沿岸中部</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">青森県太平洋沿岸</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">岩手県</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">宮城県</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">小笠原諸島</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tsunami-actions">
+                            <button class="action-btn" id="tsunami-sound-toggle">🔊 音声通知 ON</button>
+                            <button class="action-btn" id="tsunami-details">📋 詳細情報</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 震源位置情報 -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">📍 震源位置情報</div>
+                    <div class="earthquake-info-panel">
+                        <div class="coordinate-info">
+                            <div class="coord-item">
+                                <div class="coord-label">北緯</div>
+                                <div class="coord-value" id="latitude">---.---°</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">東経</div>
+                                <div class="coord-value" id="longitude">---.---°</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">深さ</div>
+                                <div class="coord-value" id="depth">-- km</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">マグニチュード</div>
+                                <div class="coord-value" id="magnitude">M-.-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.min.js"></script>
+    <!-- 設定ファイル -->
+    <script src="src/config/config.js"></script>
+    
+    <!-- データ取得システム -->
+    <script src="src/data-sources/jma-data-converter.js"></script>
+    <script src="src/data-sources/jma-xml-client.js"></script>
+    <script src="src/data-sources/multi-site-verification.js"></script>
+    
+    <!-- 津波システム -->
+    <script src="src/tsunami/jma-tsunami-loader.js"></script>
+    <script src="src/tsunami/tsunami-data-store.js"></script>
+    <script src="src/tsunami/tsunami-alert-system.js"></script>
+    <script src="src/tsunami/tsunami-manager.js"></script>
+    
+    <!-- 音声システム -->
+    <script src="src/audio/audio-alert-system.js"></script>
+    
+    <!-- 地震監視システム -->
+    <script src="src/earthquake/earthquake-monitor.js"></script>
+
+    <script>
+        // 地震選択関数
+        function selectEarthquake(id) {
+            const earthquake = window.monitor.earthquakeHistory.find(eq => eq.id === id);
+            if (earthquake) {
+                window.monitor.updateOverlayInfo(earthquake);
+                // 自動ズーム設定が有効かつ座標がある場合のみ地図を移動
+                if (window.monitor.settings.autoZoom && earthquake.latitude && earthquake.longitude) {
+                    window.monitor.map.setView([earthquake.latitude, earthquake.longitude], 8);
+                    // 地図移動後に位置チェックを実行（ホームボタン表示のため）
+                    setTimeout(() => {
+                        window.monitor.checkMapPosition();
+                    }, 100);
+                }
+                // 震度情報ポップアップを表示
+                window.monitor.showIntensityPopup(earthquake);
+                console.log(`📍 Selected earthquake: ${earthquake.location}`);
+            }
+        }
+
+        // 設定パネル表示関数
+        function openSettings() {
+            window.monitor.showSettingsPanel();
+        }
+
+        // 津波パネル更新関数
+        function updateTsunamiDisplay(activeAreas) {
+            const tsunamiPanel = document.querySelector('.tsunami-warning-panel');
+            const tsunamiSectionTitle = document.getElementById('tsunami-section-title');
+            
+            if (activeAreas.length === 0) {
+                // 津波注意報が完全に解除された場合
+                if (tsunamiPanel) {
+                    tsunamiPanel.style.display = 'none';
+                }
+                
+                // セクションタイトルを変更
+                if (tsunamiSectionTitle) {
+                    tsunamiSectionTitle.textContent = '✅ 津波情報なし';
+                    tsunamiSectionTitle.style.color = '#4CAF50';
+                }
+                
+                console.log('🚫 津波注意報完全解除: パネル非表示・タイトル変更');
+                
+            } else {
+                // アクティブな津波注意報がある場合は表示
+                if (tsunamiPanel) {
+                    tsunamiPanel.style.display = 'block';
+                }
+                
+                // セクションタイトルを元に戻す
+                if (tsunamiSectionTitle) {
+                    tsunamiSectionTitle.textContent = '🌊 津波警報・注意報';
+                    tsunamiSectionTitle.style.color = '';
+                }
+                
+                console.log(`🌊 津波注意報アクティブ: ${activeAreas.length}地域`);
+            }
+        }
+        
+        function updateTsunamiRegionsPanel(activeRegions) {
+            // 津波地域パネルの更新処理
+            console.log(`🌊 津波地域パネル更新: ${activeRegions.length}地域`);
+        }
+
+        // アプリケーション開始
+        document.addEventListener('DOMContentLoaded', () => {
+            window.monitor = new ProfessionalEarthquakeMonitor();
+        });
+        
+        // メモリリーク対策: ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (window.monitor) {
+                window.monitor.cleanup();
+            }
+        });
+        
+        // 本番環境用初期化完了
+    </script>
+</body>
+</html>

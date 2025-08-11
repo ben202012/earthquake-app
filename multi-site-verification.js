@@ -138,8 +138,8 @@ class MultiSiteVerificationSystem {
      */
     async testDataSourceConnection(site) {
         try {
-            // プロキシ経由でのテスト接続
-            const testUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(site.url)}`;
+            // 自前のプロキシエンドポイントを使用（セキュリティ向上）
+            const testUrl = `/api/proxy/jma?url=${encodeURIComponent(site.url)}`;
             
             const response = await fetch(testUrl, {
                 method: 'HEAD', // HEAD リクエストで軽量テスト

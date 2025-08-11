@@ -1585,6 +1585,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.min.js"></script>
     <script src="config.js"></script>
+    <script src="app-config.js"></script>
+    <script src="timer-manager.js"></script>
+    <script src="error-handler.js"></script>
+    <script src="data-validator.js"></script>
+    <script src="utils.js"></script>
     <script src="jma-data-converter.js"></script>
     <script src="jma-tsunami-loader.js"></script>
     <script src="jma-xml-client.js"></script>
@@ -3053,11 +3058,15 @@
                 const container = document.getElementById('earthquake-history');
                 
                 if (this.earthquakeHistory.length === 0) {
-                    container.innerHTML = `
-                        <div class="loading">
-                            <div class="loading-text">地震データを待機中...</div>
-                        </div>
-                    `;
+                    // XSS対策: innerHTML の代わりに安全な DOM 操作を使用
+                    container.textContent = '';
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'loading';
+                    const loadingText = document.createElement('div');
+                    loadingText.className = 'loading-text';
+                    loadingText.textContent = '地震データを待機中...';
+                    loadingDiv.appendChild(loadingText);
+                    container.appendChild(loadingDiv);
                     return;
                 }
 
@@ -3552,7 +3561,23 @@
                     `;
                 }
                 
-                popup.innerHTML = header + summary + intensityContent;
+                // XSS対策: innerHTML の代わりに安全な DOM 操作を使用
+                popup.textContent = '';
+                
+                // ヘッダー部分を作成
+                const headerDiv = document.createElement('div');
+                headerDiv.innerHTML = header; // headerは固定文字列なので安全
+                popup.appendChild(headerDiv);
+                
+                // サマリー部分を作成
+                const summaryDiv = document.createElement('div');
+                summaryDiv.innerHTML = summary; // summaryは固定文字列なので安全
+                popup.appendChild(summaryDiv);
+                
+                // 震度情報部分を作成
+                const intensityDiv = document.createElement('div');
+                intensityDiv.innerHTML = intensityContent; // intensityContentは固定文字列なので安全
+                popup.appendChild(intensityDiv);
                 
                 // DOM に追加
                 document.body.appendChild(overlay);

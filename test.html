@@ -33,6 +33,31 @@
         .test-header {
             text-align: center;
             margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.4);
+            color: #ff6b6b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-button:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: scale(1.1);
         }
 
         .test-title {
@@ -184,6 +209,7 @@
 <body>
     <div class="test-container">
         <div class="test-header">
+            <button class="close-button" onclick="window.close()" title="ウィンドウを閉じる">×</button>
             <h1 class="test-title">🧪 テストモード</h1>
             <p class="test-subtitle">地震監視システム v2.0 - 機能検証・デバッグツール</p>
             <a href="index.html" class="main-app-link">🌏 メインアプリに戻る</a>

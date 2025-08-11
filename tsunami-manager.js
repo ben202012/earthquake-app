@@ -275,14 +275,27 @@ class TsunamiManager {
         
         console.log(`🔄 津波情報定期更新開始 (${this.config.updateInterval / 1000}秒間隔)`);
         
-        this.updateTimer = setInterval(async () => {
-            try {
-                await this.manualUpdate();
-                console.log('🔄 定期更新完了');
-            } catch (error) {
-                console.error('🚨 定期更新エラー:', error);
-            }
-        }, this.config.updateInterval);
+        // メモリリーク対策: TimerManagerを使用
+        if (window.timerManager) {
+            this.updateTimer = window.timerManager.setInterval(async () => {
+                try {
+                    await this.manualUpdate();
+                    console.log('🔄 定期更新完了');
+                } catch (error) {
+                    console.error('🚨 定期更新エラー:', error);
+                }
+            }, this.config.updateInterval, { stopOnError: false });
+        } else {
+            // フォールバック: 従来のsetInterval
+            this.updateTimer = setInterval(async () => {
+                try {
+                    await this.manualUpdate();
+                    console.log('🔄 定期更新完了');
+                } catch (error) {
+                    console.error('🚨 定期更新エラー:', error);
+                }
+            }, this.config.updateInterval);
+        }
     }
     
     /**
@@ -290,7 +303,12 @@ class TsunamiManager {
      */
     stopPeriodicUpdate() {
         if (this.updateTimer) {
-            clearInterval(this.updateTimer);
+            // メモリリーク対策: TimerManagerを使用
+            if (window.timerManager && typeof this.updateTimer === 'number') {
+                window.timerManager.clearTimer(this.updateTimer);
+            } else {
+                clearInterval(this.updateTimer);
+            }
             this.updateTimer = null;
             console.log('⏹️ 津波情報定期更新停止');
         }

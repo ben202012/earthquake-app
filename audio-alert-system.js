@@ -193,10 +193,17 @@ class AudioAlertSystem {
         // アクティブノード管理
         this.currentPlayingNodes.set(alertId, nodes);
         
-        // 終了時のクリーンアップ
-        setTimeout(() => {
-            this.currentPlayingNodes.delete(alertId);
-        }, (pattern.duration + Math.max(...frequencies.map((_, i) => i * pattern.interval))) * 1000);
+        // 終了時のクリーンアップ（メモリリーク対策）
+        const cleanupDelay = (pattern.duration + Math.max(...frequencies.map((_, i) => i * pattern.interval))) * 1000;
+        if (window.timerManager) {
+            window.timerManager.setTimeout(() => {
+                this.currentPlayingNodes.delete(alertId);
+            }, cleanupDelay);
+        } else {
+            setTimeout(() => {
+                this.currentPlayingNodes.delete(alertId);
+            }, cleanupDelay);
+        }
     }
     
     /**
@@ -221,14 +228,27 @@ class AudioAlertSystem {
      * リピート設定
      */
     setupRepeat(alertId, alertLevel, pattern, options) {
-        const repeatTimer = setInterval(async () => {
-            if (this.state.currentAlerts.has(alertLevel)) {
-                await this.generateAndPlaySound(`${alertId}_repeat_${Date.now()}`, pattern, options);
-            } else {
-                clearInterval(repeatTimer);
-                this.state.repeatTimers.delete(alertLevel);
-            }
-        }, pattern.repeatInterval);
+        // メモリリーク対策: TimerManagerを使用
+        let repeatTimer;
+        if (window.timerManager) {
+            repeatTimer = window.timerManager.setInterval(async () => {
+                if (this.state.currentAlerts.has(alertLevel)) {
+                    await this.generateAndPlaySound(`${alertId}_repeat_${Date.now()}`, pattern, options);
+                } else {
+                    window.timerManager.clearTimer(repeatTimer);
+                    this.state.repeatTimers.delete(alertLevel);
+                }
+            }, pattern.repeatInterval, { stopOnError: true });
+        } else {
+            repeatTimer = setInterval(async () => {
+                if (this.state.currentAlerts.has(alertLevel)) {
+                    await this.generateAndPlaySound(`${alertId}_repeat_${Date.now()}`, pattern, options);
+                } else {
+                    clearInterval(repeatTimer);
+                    this.state.repeatTimers.delete(alertLevel);
+                }
+            }, pattern.repeatInterval);
+        }
         
         this.state.repeatTimers.set(alertLevel, repeatTimer);
         this.state.currentAlerts.set(alertLevel, alertId);

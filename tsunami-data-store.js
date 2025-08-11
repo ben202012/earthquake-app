@@ -8,7 +8,7 @@ class TsunamiDataStore {
         this.config = {
             storagePrefix: 'tsunami_monitor_',
             maxHistoryEntries: 1000,
-            maxStorageSize: 50 * 1024 * 1024, // 50MB
+            maxStorageSize: 5 * 1024 * 1024, // 5MB（ブラウザ制限を考慮した適正値）
             compressionEnabled: true,
             autoCleanup: true,
             backupInterval: 3600000 // 1時間毎にバックアップ
