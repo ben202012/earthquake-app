@@ -330,7 +330,20 @@
                 };
                 
                 ws.onerror = (error) => {
-                    logMessage('error', 'P2P WebSocket接続失敗: ' + error);
+                    // エラーの詳細情報を取得
+                    let errorMessage = 'P2P WebSocket接続失敗';
+                    if (error.type) {
+                        errorMessage += ` (${error.type})`;
+                    }
+                    if (error.target && error.target.url) {
+                        errorMessage += ` - URL: ${error.target.url}`;
+                    }
+                    if (error.target && error.target.readyState !== undefined) {
+                        const states = ['接続中', '接続済み', '切断中', '切断済み'];
+                        errorMessage += ` - 状態: ${states[error.target.readyState] || error.target.readyState}`;
+                    }
+                    
+                    logMessage('error', errorMessage);
                     testResults.p2pConnection = false;
                 };
                 
