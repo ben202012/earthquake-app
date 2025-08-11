@@ -2304,21 +2304,53 @@
                 
                 legend.onAdd = function(map) {
                     const div = L.DomUtil.create('div', 'jma-tsunami-legend');
-                    div.innerHTML = `
-                        <div class="legend-header">
-                            <div class="legend-title">津波予報区</div>
-                            <div class="legend-subtitle">日本太平洋沿岸全体</div>
-                        </div>
-                        <div class="legend-items">
-                            <div class="legend-item">
-                                <span class="legend-color jma-advisory"></span>
-                                津波注意報 (<span id="tsunami-area-count">9</span>地域)
-                            </div>
-                        </div>
-                        <div class="legend-footer">
-                            <small>気象庁公式データ使用</small>
-                        </div>
-                    `;
+                    
+                    // XSS対策: 安全なDOM操作を使用
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'legend-header';
+                    
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'legend-title';
+                    titleDiv.textContent = '津波予報区';
+                    
+                    const subtitleDiv = document.createElement('div');
+                    subtitleDiv.className = 'legend-subtitle';
+                    subtitleDiv.textContent = '日本太平洋沿岸全体';
+                    
+                    headerDiv.appendChild(titleDiv);
+                    headerDiv.appendChild(subtitleDiv);
+                    
+                    const itemsDiv = document.createElement('div');
+                    itemsDiv.className = 'legend-items';
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'legend-item';
+                    
+                    const colorSpan = document.createElement('span');
+                    colorSpan.className = 'legend-color jma-advisory';
+                    
+                    const countSpan = document.createElement('span');
+                    countSpan.id = 'tsunami-area-count';
+                    countSpan.textContent = '9';
+                    
+                    itemDiv.appendChild(colorSpan);
+                    itemDiv.appendChild(document.createTextNode('津波注意報 ('));
+                    itemDiv.appendChild(countSpan);
+                    itemDiv.appendChild(document.createTextNode('地域)'));
+                    
+                    itemsDiv.appendChild(itemDiv);
+                    
+                    const footerDiv = document.createElement('div');
+                    footerDiv.className = 'legend-footer';
+                    
+                    const small = document.createElement('small');
+                    small.textContent = '気象庁公式データ使用';
+                    footerDiv.appendChild(small);
+                    
+                    div.appendChild(headerDiv);
+                    div.appendChild(itemsDiv);
+                    div.appendChild(footerDiv);
+                    
                     return div;
                 };
                 
@@ -5011,7 +5043,7 @@
                         }
                     })),
                     metadata: {
-                        source: 'TsunamiPredictionEngine',
+                        source: 'TsunamiSystem', // 修正: 削除されたエンジン参照を汎用名に変更
                         timestamp: prediction.metadata.predictionTime,
                         algorithm: prediction.metadata.algorithm,
                         confidence: prediction.metadata.confidence

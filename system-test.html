@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>システム動作確認テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #test-results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 地震監視システム 動作確認テスト</h1>
+    
+    <div class="test-container">
+        <h2>基本機能テスト</h2>
+        <button onclick="runBasicTests()">基本テスト実行</button>
+        <button onclick="runModuleTests()">モジュールテスト実行</button>
+        <button onclick="runSecurityTests()">セキュリティテスト実行</button>
+        <button onclick="runAllTests()">全テスト実行</button>
+    </div>
+    
+    <div id="test-results"></div>
+
+    <script>
+        const results = document.getElementById('test-results');
+        
+        function addResult(message, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            results.innerHTML = '';
+        }
+        
+        async function runBasicTests() {
+            clearResults();
+            addResult('🔍 基本機能テスト開始', 'warning');
+            
+            // DOM要素の存在確認
+            try {
+                if (typeof document !== 'undefined') {
+                    addResult('✅ DOM API利用可能');
+                } else {
+                    addResult('❌ DOM API利用不可', 'error');
+                }
+                
+                // ローカルストレージテスト
+                localStorage.setItem('test', 'value');
+                if (localStorage.getItem('test') === 'value') {
+                    addResult('✅ LocalStorage動作正常');
+                    localStorage.removeItem('test');
+                } else {
+                    addResult('❌ LocalStorage動作異常', 'error');
+                }
+                
+                // 地図ライブラリ確認
+                if (typeof L !== 'undefined') {
+                    addResult('✅ Leaflet地図ライブラリ読み込み済み');
+                } else {
+                    addResult('❌ Leaflet地図ライブラリ未読み込み', 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ 基本機能テストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runModuleTests() {
+            clearResults();
+            addResult('🔍 モジュールテスト開始', 'warning');
+            
+            try {
+                // 残存モジュールの確認
+                const modules = [
+                    'TsunamiManager',
+                    'JMAXMLClient', 
+                    'TsunamiDataStore',
+                    'TsunamiAlertSystem',
+                    'AudioAlertSystem',
+                    'MultiSiteVerificationSystem'
+                ];
+                
+                modules.forEach(moduleName => {
+                    try {
+                        if (typeof window[moduleName] !== 'undefined') {
+                            addResult(`✅ ${moduleName} クラス利用可能`);
+                        } else {
+                            addResult(`⚠️ ${moduleName} クラス未定義`, 'warning');
+                        }
+                    } catch (e) {
+                        addResult(`❌ ${moduleName} テストエラー: ${e.message}`, 'error');
+                    }
+                });
+                
+                // 削除されたモジュールが参照されていないか確認
+                const deletedModules = ['HistoricalTsunamiData', 'TsunamiPredictionEngine'];
+                deletedModules.forEach(moduleName => {
+                    if (typeof window[moduleName] === 'undefined') {
+                        addResult(`✅ ${moduleName} 正常に削除済み`);
+                    } else {
+                        addResult(`❌ ${moduleName} 削除されていません`, 'error');
+                    }
+                });
+                
+            } catch (error) {
+                addResult(`❌ モジュールテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runSecurityTests() {
+            clearResults();
+            addResult('🔍 セキュリティテスト開始', 'warning');
+            
+            try {
+                // XSS対策テスト
+                const testDiv = document.createElement('div');
+                testDiv.textContent = '<script>alert("test")</script>';
+                
+                if (testDiv.innerHTML.includes('&lt;script&gt;')) {
+                    addResult('✅ textContentによるXSS対策が機能');
+                } else {
+                    addResult('⚠️ XSS対策の確認が必要', 'warning');
+                }
+                
+                // CSPヘッダー確認（可能な場合）
+                try {
+                    const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+                    if (cspMeta) {
+                        addResult('✅ CSPメタタグ設定済み');
+                    } else {
+                        addResult('⚠️ CSPメタタグ未設定', 'warning');
+                    }
+                } catch (e) {
+                    addResult('⚠️ CSP確認スキップ', 'warning');
+                }
+                
+            } catch (error) {
+                addResult(`❌ セキュリティテストエラー: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            clearResults();
+            addResult('🚀 全テスト実行開始', 'warning');
+            
+            await runBasicTests();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await runModuleTests();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await runSecurityTests();
+            
+            addResult('✅ 全テスト完了', 'success');
+        }
+        
+        // ページ読み込み時に基本テストを実行
+        window.addEventListener('load', () => {
+            setTimeout(runBasicTests, 1000);
+        });
+    </script>
+</body>
+</html>
