@@ -1593,9 +1593,9 @@
     <script src="tsunami-alert-system.js"></script>
     <script src="tsunami-manager.js"></script>
     <!-- 60%実用機能達成のための高度システム -->
-    <script src="tsunami-prediction-engine.js"></script>
+
     <script src="multi-site-verification.js"></script>
-    <script src="historical-tsunami-data.js"></script>
+
     <script>
         // プロフェッショナル地震監視システム
         class ProfessionalEarthquakeMonitor {
@@ -4509,7 +4509,7 @@
                 
                 try {
                     // 高精度津波予測エンジン
-                    this.tsunamiPredictionEngine = new TsunamiPredictionEngine();
+                    // this.tsunamiPredictionEngine = new TsunamiPredictionEngine(); // 削除: 完成度が低いため
                     
                     // 多地点連携検証システム
                     this.multiSiteVerification = new MultiSiteVerificationSystem();
@@ -4519,13 +4519,13 @@
                     this.tsunamiDataStore = new TsunamiDataStore();
                     
                     // 過去津波データシステム
-                    this.historicalTsunamiData = new HistoricalTsunamiData();
+                    // this.historicalTsunamiData = new HistoricalTsunamiData(); // 削除: 完成度が低いため
                     
                     // 警報システム
                     this.tsunamiAlertSystem = new TsunamiAlertSystem();
                     
                     // 過去データの初期投入
-                    this.loadHistoricalTsunamiData();
+                    // this.loadHistoricalTsunamiData(); // 削除: HistoricalTsunamiDataクラスが無効化されたため
                     
                     // システム間連携設定
                     this.setupAdvancedSystemConnections();
@@ -4538,8 +4538,9 @@
             }
             
             /**
-             * 過去津波データ投入 (実用性向上)
+             * 過去津波データ投入 (実用性向上) - 削除: 完成度が低いため無効化
              */
+            /*
             async loadHistoricalTsunamiData() {
                 console.log('📚 貴重な過去津波データの投入開始');
                 
@@ -4573,6 +4574,7 @@
                     console.error('❌ 過去津波データ投入失敗:', error);
                 }
             }
+            */
             
             /**
              * 過去データ投入完了メッセージ表示
@@ -4630,6 +4632,8 @@
                 this.multiSiteVerification.on('onVerificationComplete', (consensusData, comparisonResults) => {
                     if (consensusData && consensusData.events.length > 0) {
                         // コンセンサスデータから津波予測実行
+                        // 津波予測エンジンが無効化されたため、この処理をコメントアウト
+                        /*
                         consensusData.events.forEach(async (event) => {
                             try {
                                 const prediction = await this.tsunamiPredictionEngine.predictTsunami(event);
@@ -4644,6 +4648,7 @@
                                 console.error('❌ 津波予測エラー:', error);
                             }
                         });
+                        */
                     }
                 });
                 
@@ -4709,8 +4714,9 @@
             }
             
             /**
-             * リアルタイム津波評価
+             * リアルタイム津波評価 - 削除: 予測エンジンが無効化されたため
              */
+            /*
             async performRealTimeTsunamiAssessment(earthquakeData) {
                 try {
                     // 高精度予測エンジンで即座に評価
@@ -4731,6 +4737,7 @@
                     console.error('❌ リアルタイム津波評価エラー:', error);
                 }
             }
+            */
             
             /**
              * 避難経路準備
@@ -4919,8 +4926,9 @@
             }
             
             /**
-             * 予測警報処理
+             * 予測警報処理 - 削除: 予測エンジンが無効化されたため
              */
+            /*
             processPredictionAlert(prediction) {
                 if (!prediction || !prediction.predictions) return;
                 
@@ -4956,6 +4964,7 @@
                 
                 console.log(`🔮 予測警報処理完了: ${prediction.predictions.length}地点`);
             }
+            */
             
             /**
              * データ相違警告表示
@@ -6118,59 +6127,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             window.monitor = new ProfessionalEarthquakeMonitor();
         });
-        // デバッグ用関数をグローバルに公開
-        window.testBoundaries = () => {
-            if (window.monitor) {
-                window.monitor.forceBoundaryDisplay();
-            } else {
-                console.error('❌ monitor が初期化されていません');
-            }
-        };
-        
-        window.refreshBoundaries = () => {
-            if (window.monitor) {
-                window.monitor.updateJapanBoundariesForLayer();
-                console.log('🔄 境界更新を実行しました');
-            } else {
-                console.error('❌ monitor が初期化されていません');
-            }
-        };
-        
-        window.hideTsunami = () => {
-            if (window.monitor) {
-                // 津波レイヤーを削除
-                if (window.monitor.tsunamiLayers) {
-                    window.monitor.tsunamiLayers.forEach(tsunami => {
-                        if (tsunami.layer && window.monitor.map.hasLayer(tsunami.layer)) {
-                            window.monitor.map.removeLayer(tsunami.layer);
-                        }
-                    });
-                    console.log('🌊 津波レイヤーを一時的に非表示にしました');
-                } else {
-                    console.log('⚠️ 津波レイヤーが見つかりません');
-                }
-                
-                // 地図上のすべてのGeoJSONレイヤーも削除（津波データ）
-                window.monitor.map.eachLayer(layer => {
-                    if (layer instanceof L.GeoJSON) {
-                        window.monitor.map.removeLayer(layer);
-                        console.log('🗑️ GeoJSONレイヤーを削除');
-                    }
-                });
-                
-                // 境界も更新
-                setTimeout(() => {
-                    window.refreshBoundaries();
-                }, 100);
-            } else {
-                console.error('❌ monitor が初期化されていません');
-            }
-        };
-        
-        console.log('🛠️ デバッグコマンド利用可能:');
-        console.log('   testBoundaries() - テスト境界表示（赤い円）');
-        console.log('   refreshBoundaries() - 境界更新（緑色の円）');
-        console.log('   hideTsunami() - 津波レイヤー非表示');
+        // 本番環境用初期化完了
     </script>
 </body>
 </html>
