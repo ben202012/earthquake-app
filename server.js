@@ -7,24 +7,8 @@ const crypto = require('crypto');
 
 // セキュリティ設定の読み込み
 let SECURITY_CONFIG;
-try {
-    SECURITY_CONFIG = require('./security-config.js');
-    console.log('✅ セキュリティ設定ファイルを読み込みました');
-} catch (error) {
-    console.warn('⚠️ セキュリティ設定ファイルが見つかりません。デフォルト設定を使用します。');
-    // デフォルトのセキュリティ設定
-    SECURITY_CONFIG = {
-        cors: {
-            allowedOrigins: ['http://localhost:8080'],
-            allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization'],
-            allowCredentials: false
-        },
-        proxy: {
-            allowedHosts: ['earthquake.usgs.gov', 'www.jma.go.jp']
-        }
-    };
-}
+const SECURITY_CONFIG = require('./security-config.js');
+console.log('✅ セキュリティ設定ファイルを読み込みました');
 
 const port = 8080;
 
@@ -316,38 +300,6 @@ const server = http.createServer((req, res) => {
     if (pathname.startsWith('/api/proxy/')) {
         const apiId = pathname.replace('/api/proxy/', '');
         
-        // JMA専用プロキシエンドポイント（セキュリティ強化）
-        if (apiId === 'jma' && parsedUrl.query.url) {
-            const targetUrl = decodeURIComponent(parsedUrl.query.url);
-            
-            // JMAドメインのみ許可（セキュリティ対策）
-            const allowedDomains = [
-                'www.jma.go.jp',
-                'api.p2pquake.net',
-                'earthquake.usgs.gov'
-            ];
-            
-            try {
-                const urlObj = new URL(targetUrl);
-                if (allowedDomains.includes(urlObj.hostname)) {
-                    proxyRequest(targetUrl, req, res);
-                } else {
-                    res.writeHead(403, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        error: 'Forbidden domain',
-                        message: '許可されていないドメインです'
-                    }));
-                }
-            } catch (error) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    error: 'Invalid URL',
-                    message: '無効なURLです'
-                }));
-            }
-            return;
-        }
-        
         // 一般的な外部API
         if (externalAPIs[apiId]) {
             proxyRequest(externalAPIs[apiId], req, res);
@@ -408,11 +360,11 @@ const server = http.createServer((req, res) => {
             let responseData = data;
             let nonce = null;
             
-            // HTMLファイルの場合の処理（一時的にnonce生成を無効化）
+            // HTMLファイルの場合の処理（nonce生成を有効化）
             if (ext === '.html') {
-                // テスト環境ではnonce生成を無効にして、unsafe-inlineを使用
-                console.log(`📄 HTMLファイル配信 (${pathname}): nonce無効モード`);
-                // nonce = generateNonce(); // 一時的に無効化
+                // HTMLファイル配信時にnonceを生成してCSPを強化
+                console.log(`📄 HTMLファイル配信 (${pathname}): nonce生成モード`);
+                nonce = generateNonce();
             }
             
             // セキュリティヘッダーを設定（nonceを含む）

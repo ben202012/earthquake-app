@@ -56,18 +56,7 @@ function setupSecureEventHandlers() {
         console.log('✅ 再接続ボタンのイベントハンドラー設定完了');
     }
     
-    // 夜間モードボタン（動的に追加される）
-    setTimeout(() => {
-        const nightModeBtn = document.getElementById('night-mode-toggle');
-        if (nightModeBtn) {
-            nightModeBtn.addEventListener('click', () => {
-                if (window.monitor) {
-                    window.monitor.toggleNightMode();
-                }
-            });
-            console.log('✅ 夜間モードボタンのイベントハンドラー設定完了');
-        }
-    }, 1000);
+    // 夜間モードボタンのイベントハンドラは、app.js内でボタンが動的に生成される際に設定されます。
 }
 
 // メモリリーク対策: ページ離脱時のクリーンアップ
