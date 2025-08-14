@@ -1,4 +1,4 @@
-const CONFIG = {
+export const CONFIG = {
     API: {
         P2P_WEBSOCKET_URL: 'wss://api.p2pquake.net/v2/ws',
         JMA_BASE_URL: 'https://api.p2pquake.net/v2/history?codes=551&limit=10',

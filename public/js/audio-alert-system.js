@@ -1,3 +1,5 @@
+import { timerManager } from './timer-manager.js';
+
 /**
  * 音声警報システム
  * Web Audio APIを使用したプログラム的音声生成による警報システム
@@ -195,8 +197,8 @@ class AudioAlertSystem {
         
         // 終了時のクリーンアップ（メモリリーク対策）
         const cleanupDelay = (pattern.duration + Math.max(...frequencies.map((_, i) => i * pattern.interval))) * 1000;
-        if (window.timerManager) {
-            window.timerManager.setTimeout(() => {
+        if (timerManager) {
+            timerManager.setTimeout(() => {
                 this.currentPlayingNodes.delete(alertId);
             }, cleanupDelay);
         } else {
@@ -230,12 +232,12 @@ class AudioAlertSystem {
     setupRepeat(alertId, alertLevel, pattern, options) {
         // メモリリーク対策: TimerManagerを使用
         let repeatTimer;
-        if (window.timerManager) {
-            repeatTimer = window.timerManager.setInterval(async () => {
+        if (timerManager) {
+            repeatTimer = timerManager.setInterval(async () => {
                 if (this.state.currentAlerts.has(alertLevel)) {
                     await this.generateAndPlaySound(`${alertId}_repeat_${Date.now()}`, pattern, options);
                 } else {
-                    window.timerManager.clearTimer(repeatTimer);
+                    timerManager.clearTimer(repeatTimer);
                     this.state.repeatTimers.delete(alertLevel);
                 }
             }, pattern.repeatInterval, { stopOnError: true });
@@ -356,4 +358,5 @@ class AudioAlertSystem {
 }
 
 // グローバル音声システムインスタンス
-window.audioAlertSystem = new AudioAlertSystem(); 
+const audioAlertSystem = new AudioAlertSystem();
+export { audioAlertSystem };

@@ -2,6 +2,7 @@
  * 地震監視システム メインスクリプト
  * CSPセキュリティ対応版
  */
+import ProfessionalEarthquakeMonitor from './app.js';
 
 // グローバル関数（後方互換性のため）
 function openSettings() {
@@ -13,13 +14,6 @@ function openSettings() {
 // DOMContentLoaded時の初期化
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🌏 地震監視システム v3.0 - 安全モードで起動中...');
-    
-    // クラスの存在確認
-    if (typeof ProfessionalEarthquakeMonitor === 'undefined') {
-        console.error('❌ ProfessionalEarthquakeMonitorクラスが未定義です');
-        console.log('利用可能なオブジェクト:', Object.keys(window));
-        return;
-    }
     
     // メインモニター初期化
     try {

@@ -365,9 +365,5 @@ class ErrorHandler {
     }
 }
 
-// グローバルインスタンス
-if (typeof window !== 'undefined') {
-    window.errorHandler = new ErrorHandler();
-} else {
-    module.exports = ErrorHandler;
-}
+const errorHandler = new ErrorHandler();
+export { errorHandler };

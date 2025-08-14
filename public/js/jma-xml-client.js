@@ -3,7 +3,7 @@
  * 実用機能50%達成のための実装
  */
 
-class JMAXMLClient {
+export class JMAXMLClient {
     constructor() {
         this.config = {
             // 気象庁XML配信サービス (PULL型)
@@ -433,16 +433,6 @@ class JMAXMLClient {
         console.log('🔄 気象庁XML手動更新実行');
         return await this.performUpdate();
     }
-}
-
-// グローバル公開
-if (typeof window !== 'undefined') {
-    window.JMAXMLClient = JMAXMLClient;
-}
-
-// Node.js環境対応
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = JMAXMLClient;
 }
 
 console.log('📡 気象庁XML津波データクライアント準備完了');

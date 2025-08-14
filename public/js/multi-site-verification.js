@@ -3,8 +3,9 @@
  * 60%実用機能達成のための分散監視・信頼性向上システム
  */
 
-class MultiSiteVerificationSystem {
-    constructor() {
+export class MultiSiteVerificationSystem {
+    constructor(monitor) {
+        this.monitor = monitor;
         this.config = {
             // 連携サイト設定（プロキシサーバー経由）
             partnerSites: [
@@ -621,10 +622,10 @@ class MultiSiteVerificationSystem {
      */
     startRealtimeComparison() {
         // P2P地震情報との即座比較
-        if (window.monitor && window.monitor.websocket) {
-            const originalOnMessage = window.monitor.websocket.onmessage;
+        if (this.monitor && this.monitor.websocket) {
+            const originalOnMessage = this.monitor.websocket.onmessage;
             
-            window.monitor.websocket.onmessage = (event) => {
+            this.monitor.websocket.onmessage = (event) => {
                 // 既存処理
                 if (originalOnMessage) originalOnMessage(event);
                 
@@ -936,16 +937,6 @@ class MultiSiteVerificationSystem {
             verificationCount: this.state.verificationResults.length
         };
     }
-}
-
-// グローバル公開
-if (typeof window !== 'undefined') {
-    window.MultiSiteVerificationSystem = MultiSiteVerificationSystem;
-}
-
-// Node.js環境対応
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = MultiSiteVerificationSystem;
 }
 
 console.log('🌐 多地点連携検証システム準備完了');

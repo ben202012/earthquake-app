@@ -22,6 +22,30 @@ try {
         },
         proxy: {
             allowedHosts: ['earthquake.usgs.gov', 'www.jma.go.jp']
+    },
+    headers: {
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "https://unpkg.com"],
+                styleSrc: ["'self'", "https://unpkg.com", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
+                connectSrc: ["'self'", "wss://api.p2pquake.net", "https://earthquake.usgs.gov", "www.jma.go.jp", "https://api.allorigins.win", "https://corsproxy.io"]
+            }
+        },
+        xFrameOptions: 'SAMEORIGIN',
+        xXSSProtection: '1; mode=block',
+        xContentTypeOptions: 'nosniff',
+        referrerPolicy: 'strict-origin-when-cross-origin',
+        strictTransportSecurity: {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: false
+        }
+    },
+    logging: {
+        logAccess: true,
+        includeErrorDetails: true
         }
     };
 }
@@ -379,12 +403,16 @@ const server = http.createServer((req, res) => {
     }
     
     // 静的ファイル配信
+    const isProduction = process.env.NODE_ENV === 'production';
+    const staticDir = isProduction ? 'dist' : 'public';
+
     // Default to index.html
     if (pathname === '/') {
         pathname = '/index.html';
     }
     
-    const filePath = path.join(__dirname, pathname);
+    // 静的ファイルの配信元を環境に応じて設定
+    const filePath = path.join(__dirname, staticDir, pathname);
     const ext = path.extname(filePath);
     const mimeType = mimeTypes[ext] || 'text/plain';
     

@@ -195,9 +195,5 @@ class TimerManager {
     }
 }
 
-// グローバルインスタンス
-if (typeof window !== 'undefined') {
-    window.timerManager = new TimerManager();
-} else {
-    module.exports = TimerManager;
-}
+const timerManager = new TimerManager();
+export { timerManager };

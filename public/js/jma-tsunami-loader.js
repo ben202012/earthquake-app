@@ -3,7 +3,7 @@
  * 89MB Shapefile → 1.5MB TopoJSON最適化済み
  */
 
-class JMATsunamiLoader {
+export class JMATsunamiLoader {
     constructor() {
         this.dataUrl = './data/jma-tsunami-areas.topojson';
         this.cache = null;
@@ -382,16 +382,6 @@ class JMATsunamiLoader {
         this.clearCache();
         return await this.loadTsunamiAreas();
     }
-}
-
-// グローバル利用可能にする
-if (typeof window !== 'undefined') {
-    window.JMATsunamiLoader = JMATsunamiLoader;
-}
-
-// Node.js環境対応
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = JMATsunamiLoader;
 }
 
 console.log('📋 JMA津波予報区ローダー準備完了');

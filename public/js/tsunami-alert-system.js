@@ -1,9 +1,11 @@
+import { audioAlertSystem } from './audio-alert-system.js';
+
 /**
  * 津波自動警報・通知システム
  * 実用機能50%達成のための重要実装
  */
 
-class TsunamiAlertSystem {
+export class TsunamiAlertSystem {
     constructor() {
         this.config = {
             // 警報レベル設定
@@ -73,7 +75,7 @@ class TsunamiAlertSystem {
         };
         
         // Web Audio API統合
-        this.audioSystem = window.audioAlertSystem || null;
+        this.audioSystem = audioAlertSystem || null;
         
         this.initializeSystem();
     }
@@ -132,8 +134,8 @@ class TsunamiAlertSystem {
         
         try {
             // グローバル音声システムとの統合
-            if (window.audioAlertSystem) {
-                this.audioSystem = window.audioAlertSystem;
+            if (audioAlertSystem) {
+                this.audioSystem = audioAlertSystem;
                 
                 // 音声システム初期化
                 const initialized = await this.audioSystem.initialize();
@@ -843,16 +845,6 @@ class TsunamiAlertSystem {
             silentMode: this.state.silentUntil ? new Date() < new Date(this.state.silentUntil) : false
         };
     }
-}
-
-// グローバル公開
-if (typeof window !== 'undefined') {
-    window.TsunamiAlertSystem = TsunamiAlertSystem;
-}
-
-// Node.js環境対応
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TsunamiAlertSystem;
 }
 
 console.log('🚨 津波自動警報システム準備完了');

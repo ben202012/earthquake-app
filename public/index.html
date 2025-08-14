@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地震監視システム - Professional Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="earthquake-dashboard">
+        <!-- ヘッダー -->
+        <header class="main-header">
+            <div class="header-left">
+                <div class="app-logo">🌏</div>
+                <h1 class="app-title">地震監視システム</h1>
+            </div>
+
+            <div class="header-center">
+                <div class="connection-status">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="p2p-status"></div>
+                        P2P接続
+                        <button id="reconnect-btn" class="reconnect-btn" title="手動で再接続">
+                            🔄
+                        </button>
+                    </div>
+                    <div class="status-indicator">
+                        <div class="status-dot" id="api-status"></div>
+                        API接続
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="current-time" id="current-time">--:--:--</div>
+                <button class="settings-btn" id="settings-btn">⚙️ 設定</button>
+            </div>
+        </header>
+
+        <!-- 左サイドバー -->
+        <aside class="left-sidebar">
+            <!-- EEW ステータス -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span class="section-icon">⚡</span>
+                    緊急地震速報
+                </div>
+                <div class="eew-status">
+                    <div class="eew-icon">📡</div>
+                    <div class="eew-text" id="eew-status">発信なし</div>
+                </div>
+            </div>
+
+            <!-- 統計情報 -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span class="section-icon">📊</span>
+                    監視統計
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="today-count">0</div>
+                        <div class="stat-label">今日の地震</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="week-count">0</div>
+                        <div class="stat-label">今週の地震</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="max-intensity">-</div>
+                        <div class="stat-label">最大震度</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="response-time">0ms</div>
+                        <div class="stat-label">応答時間</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最新地震リスト -->
+            <div class="earthquake-list">
+                <div class="section-title">
+                    <span class="section-icon">🔴</span>
+                    最新地震情報
+                </div>
+                <div id="earthquake-history">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">データを読み込み中...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- メイン地図エリア -->
+        <main class="main-content">
+            <div class="map-container">
+                <div id="earthquake-map"></div>
+            </div>
+        </main>
+
+        <!-- 右パネル -->
+        <aside class="right-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">
+                    📡 リアルタイム監視
+                    <span class="live-indicator">LIVE</span>
+                </h2>
+            </div>
+
+            <div class="monitoring-panel">
+                <!-- リアルタイム時計 -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">システム時刻</div>
+                    <div class="real-time-clock">
+                        <div class="clock-display" id="system-clock">--:--:--</div>
+                        <div class="clock-date" id="system-date">----/--/--</div>
+                    </div>
+                </div>
+
+                <!-- メトリクス -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">パフォーマンス</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="uptime">00:00:00</div>
+                            <div class="metric-label">稼働時間</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="data-packets">0</div>
+                            <div class="metric-label">受信データ</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="memory-usage">0MB</div>
+                            <div class="metric-label">メモリ使用量</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="active-regions">0</div>
+                            <div class="metric-label">活発地域</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 津波警報パネル -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title" id="tsunami-section-title">🌊 津波警報・注意報</div>
+                    <div class="tsunami-warning-panel">
+                        <div class="tsunami-status">
+                            <div class="tsunami-level advisory" id="tsunami-level">
+                                <div class="level-indicator"></div>
+                                <div class="level-text">津波注意報</div>
+                            </div>
+                            <div class="tsunami-time">発表: 30日20:45 JST</div>
+                        </div>
+
+                        <div class="tsunami-regions">
+                            <div class="region-item advisory">
+                                <div class="region-name">北海道太平洋沿岸東部</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">北海道太平洋沿岸中部</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">青森県太平洋沿岸</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">岩手県</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">宮城県</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                            <div class="region-item advisory">
+                                <div class="region-name">小笠原諸島</div>
+                                <div class="region-info">
+                                    <span class="wave-height">1m</span>
+                                    <span class="arrival-time">既に到達と推定</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tsunami-actions">
+                            <button class="action-btn" id="tsunami-sound-toggle">🔊 音声通知 ON</button>
+                            <button class="action-btn" id="tsunami-details">📋 詳細情報</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 震源位置情報 -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">📍 震源位置情報</div>
+                    <div class="earthquake-info-panel">
+                        <div class="coordinate-info">
+                            <div class="coord-item">
+                                <div class="coord-label">北緯</div>
+                                <div class="coord-value" id="latitude">---.---°</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">東経</div>
+                                <div class="coord-value" id="longitude">---.---°</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">深さ</div>
+                                <div class="coord-value" id="depth">-- km</div>
+                            </div>
+                            <div class="coord-item">
+                                <div class="coord-label">マグニチュード</div>
+                                <div class="coord-value" id="magnitude">M-.-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.min.js"></script>
+
+    <!-- Main Application Logic -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

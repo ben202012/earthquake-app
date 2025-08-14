@@ -494,9 +494,5 @@ class AppConfig {
     }
 }
 
-// グローバルインスタンス
-if (typeof window !== 'undefined') {
-    window.appConfig = new AppConfig();
-} else {
-    module.exports = AppConfig;
-}
+const appConfig = new AppConfig();
+export { appConfig };

@@ -3,7 +3,7 @@
  * 実用機能向上のための実装
  */
 
-class TsunamiDataStore {
+export class TsunamiDataStore {
     constructor() {
         this.config = {
             storagePrefix: 'tsunami_monitor_',
@@ -499,16 +499,6 @@ class TsunamiDataStore {
         
         return false;
     }
-}
-
-// グローバル公開
-if (typeof window !== 'undefined') {
-    window.TsunamiDataStore = TsunamiDataStore;
-}
-
-// Node.js環境対応
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TsunamiDataStore;
 }
 
 console.log('💾 津波データストレージシステム準備完了');

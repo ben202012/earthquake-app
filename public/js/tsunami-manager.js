@@ -1,9 +1,12 @@
+import { JMATsunamiLoader } from './jma-tsunami-loader.js';
+import { timerManager } from './timer-manager.js';
+
 /**
  * 津波状態管理システム (リアルタイム対応)
  * 30%完成度版 - 基盤機能実装
  */
 
-class TsunamiManager {
+export class TsunamiManager {
     constructor() {
         this.currentState = {
             active: false,
@@ -276,8 +279,8 @@ class TsunamiManager {
         console.log(`🔄 津波情報定期更新開始 (${this.config.updateInterval / 1000}秒間隔)`);
         
         // メモリリーク対策: TimerManagerを使用
-        if (window.timerManager) {
-            this.updateTimer = window.timerManager.setInterval(async () => {
+        if (timerManager) {
+            this.updateTimer = timerManager.setInterval(async () => {
                 try {
                     await this.manualUpdate();
                     console.log('🔄 定期更新完了');
@@ -450,16 +453,6 @@ class TsunamiManager {
             updateTimer: this.updateTimer !== null
         };
     }
-}
-
-// グローバル公開
-if (typeof window !== 'undefined') {
-    window.TsunamiManager = TsunamiManager;
-}
-
-// Node.js環境対応
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TsunamiManager;
 }
 
 console.log('🌊 津波状態管理システム (30%完成度版) 準備完了');

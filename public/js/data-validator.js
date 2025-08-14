@@ -480,9 +480,5 @@ class AnomalyDetector {
     }
 }
 
-// グローバルインスタンス
-if (typeof window !== 'undefined') {
-    window.dataValidator = new DataValidator();
-} else {
-    module.exports = { DataValidator, AnomalyDetector };
-}
+const dataValidator = new DataValidator();
+export { dataValidator };

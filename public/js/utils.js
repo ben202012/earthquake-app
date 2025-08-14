@@ -530,9 +530,5 @@ class Utils {
     }
 }
 
-// グローバルインスタンス
-if (typeof window !== 'undefined') {
-    window.utils = new Utils();
-} else {
-    module.exports = Utils;
-}
+const utils = new Utils();
+export { utils };
