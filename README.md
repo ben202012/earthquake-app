@@ -137,7 +137,7 @@ cd earthquake-app
 node server.js
 ```
 
-### アクセス [[memory:5505663]]
+### アクセス
 ```
 メインアプリ: http://localhost:8080/index.html
 音声テスト: http://localhost:8080/audio-test.html
