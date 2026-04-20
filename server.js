@@ -372,7 +372,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({
             status: 'running',
             timestamp: new Date().toISOString(),
-            server: 'EarthquakeMonitor v3.0',
+            server: 'EarthquakeMonitor v3.3',
             availableAPIs: Object.keys(externalAPIs)
         }));
         return;
@@ -430,7 +430,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, () => {
-    console.log(`🌏 地震監視システム v3.0 サーバーが起動しました`);
+    console.log(`🌏 地震監視システム v3.3 サーバーが起動しました`);
     console.log(`📍 アクセスURL: http://localhost:${port}`);
     console.log(`🔧 メインアプリ: http://localhost:${port}/index.html`);
     console.log(`🧪 音声テスト: http://localhost:${port}/audio-test.html`);
