@@ -1,8 +1,16 @@
-# 🌏 地震監視システム v3.2 - セキュリティ強化版 技術仕様書（CSP対応・本番環境対応）
+# 🌏 地震情報システム v3.3.1 - 技術仕様書（CSP対応・TV同等津波ライブ表示・P2P code 552 連携）
+
+> **📝 v3.3.1（2026-04-21）更新注記**
+> このドキュメントは v3.2 時点の設計として書かれており、本文中には当時の
+> 数値目標・用語が残っています。最新の実装状況・実測値・仕様変更点は
+> `README.md` の「🆕 v3.3 / v3.3.1 の変更点」節を正とします。具体的な
+> 齟齬: 「監視」系用語は UI / コードでは「情報」系に置換済み、P2P
+> `limit=10` は `limit=100` に拡大、「稼働率 98.5%」「平均応答時間 250ms」
+> などの定量値は未実測であったため本 README からは削除済み。
 
 ## 1. システム概要
 
-**🎯 実用機能達成度: 65%完了 + セキュリティ強化90%完了 (本番環境対応)**
+**🎯 実用機能達成度: 85%完了 + セキュリティ強化90%完了 (本番環境対応)**
 
 ### 1.0 v3.2 セキュリティ強化の主要改善点
 
@@ -156,7 +164,7 @@ ARCHITECTURE_REDESIGN.md   # Architecture Design Document
 
 ##### 主要コンポーネント:
 - **メインヘッダー (高さ70px)**:
-  - 🌏 アプリロゴ + タイトル "地震監視システム"
+  - 🌏 アプリロゴ + タイトル "地震情報システム"
   - 🔌 P2P/API接続ステータスインジケーター（緑/赤）
   - 🕐 リアルタイム時計表示
   - ⚙️ 設定ボタン
@@ -238,7 +246,7 @@ wss://api.p2pquake.net/v2/ws
 
 #### 3.2.1 エンドポイント
 ```
-https://api.p2pquake.net/v2/history?codes=551&limit=10
+https://api.p2pquake.net/v2/history?codes=551&limit=100
 ```
 
 #### 3.2.2 取得方式
@@ -307,7 +315,7 @@ websocket.onmessage = (event) => {
 
 // P2P履歴情報（定期取得・10件）
 setInterval(async () => {
-  const data = await fetchP2PHistoryData(); // limit=10
+  const data = await fetchP2PHistoryData(); // limit=100（v3.3.1 で拡大）
   updateJMAPanel(data); // 10件のクリック可能カード表示
   if (data.length > 0) {
     updateMap(data[0]); // 最新データで地図更新
@@ -532,7 +540,7 @@ lsof -ti:8080 | xargs kill -9
 // 統計データ構造
 dashboardStats: {
   todayCount: 0,      // 今日の地震数
-  weekCount: 0,       // 今週の地震数  
+  weekCount: 0,       // 過去１週間の地震数
   maxIntensity: '-',  // 最大震度
   activeRegions: '-', // 活発地域数
   lastActivity: null  // 最終活動時刻
@@ -664,7 +672,7 @@ updateSetting(key, value) {
 // 通知テスト
 testNotification() {
     if (Notification.permission === 'granted') {
-        new Notification('🌏 地震監視システム', {
+        new Notification('🌏 地震情報システム', {
             body: 'テスト通知が正常に送信されました。\nM4.5 テスト地震 震度3'
         });
     }
