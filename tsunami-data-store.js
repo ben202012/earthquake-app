@@ -484,7 +484,7 @@ class TsunamiDataStore {
      * データクリア
      */
     clearAllData() {
-        const confirmed = confirm('全ての津波監視データを削除しますか？この操作は取り消せません。');
+        const confirmed = confirm('全ての津波情報データを削除しますか？この操作は取り消せません。');
         
         if (confirmed) {
             localStorage.removeItem(this.config.storagePrefix + 'data');

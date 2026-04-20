@@ -106,7 +106,7 @@ class AppConfig {
                 testInterval: 86400000 // 24時間
             },
             
-            // 地震監視設定
+            // 地震情報設定
             earthquake: {
                 enableMonitoring: true,
                 minMagnitude: 3.0,
@@ -152,7 +152,7 @@ class AppConfig {
             // 設定の妥当性チェック
             this.validateConfig();
             
-            // 設定変更の監視開始
+            // 設定変更の検知開始
             this.startConfigWatcher();
             
             console.log('📋 設定初期化完了:', this.currentConfig.system);
@@ -326,7 +326,7 @@ class AppConfig {
     }
     
     /**
-     * 設定変更の監視
+     * 設定変更の検知
      */
     addConfigListener(path, callback) {
         if (!this.configListeners.has(path)) {
@@ -373,10 +373,10 @@ class AppConfig {
     }
     
     /**
-     * 設定変更の監視開始
+     * 設定変更の検知開始
      */
     startConfigWatcher() {
-        // LocalStorageの変更を監視
+        // LocalStorageの変更を検知
         if (typeof window !== 'undefined') {
             window.addEventListener('storage', (event) => {
                 if (event.key === 'app_config' && event.newValue !== event.oldValue) {

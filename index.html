@@ -1714,7 +1714,7 @@
                 // 夜間モード状態
                 this.nightModeEnabled = false;
                 
-                // 実用津波監視システム (50%完成度版)
+                // 実用津波情報システム (50%完成度版)
                 this.tsunamiManager = new TsunamiManager();
                 this.jmaXmlClient = new JMAXMLClient();
                 this.tsunamiDataStore = new TsunamiDataStore();
@@ -1881,7 +1881,7 @@
                 this.currentLayer = defaultLayer;
                 this.currentLayerName = '標準マップ';
                 
-                // イベントリスナーでレイヤー変更を監視
+                // イベントリスナーでレイヤー変更を検知
                 this.map.on('baselayerchange', (e) => {
                     this.currentLayerName = e.name;
                     console.log(`🗺️ Map layer changed to: "${e.name}"`);
@@ -1912,7 +1912,7 @@
                 // ホームボタンコントロールを追加
                 this.addHomeControl();
                 
-                // 地図移動イベントを監視
+                // 地図移動イベントを検知
                 this.setupMapEventListeners();
                 
                 // 明度設定を初期化・適用
@@ -2270,7 +2270,7 @@
                     // 津波パネルと凡例の表示制御
                     updateTsunamiDisplay(activeAreas);
                     
-                    // リアルタイム監視パネルの津波地域を更新
+                    // リアルタイム情報パネルの津波地域を更新
                     updateTsunamiRegionsPanel(activeAreas);
                     
                     // アクティブな津波データがない場合は地図レイヤーと凡例を非表示
@@ -2707,7 +2707,7 @@
             
             // 地図移動イベントリスナーを設定
             setupMapEventListeners() {
-                // 地図の移動・ズーム・パンイベントを監視
+                // 地図の移動・ズーム・パンイベントを検知
                 this.map.on('moveend zoomend', () => {
                     this.checkMapPosition();
                 });
@@ -3636,7 +3636,7 @@
 
             startPerformanceMonitoring() {
                 this.intervals.performance = setInterval(() => {
-                    // メモリ使用量の監視
+                    // メモリ使用量の計測
                     if (performance.memory) {
                         const memoryUsageEl = document.getElementById('memory-usage');
                         if (memoryUsageEl) {
@@ -4946,10 +4946,10 @@
             }
             
             /**
-             * 実用津波監視システムセットアップ (50%完成度版)
+             * 実用津波情報システムセットアップ (50%完成度版)
              */
             setupPracticalTsunamiSystem() {
-                console.log('🌊 実用津波監視システムセットアップ開始');
+                console.log('🌊 実用津波情報システムセットアップ開始');
                 
                 // 高度システムを初期化
                 this.initializeAdvancedSystems();
@@ -4957,7 +4957,7 @@
                 // 各システム間の連携設定
                 this.connectTsunamiSystems();
                 
-                // 実際の気象庁データ監視開始
+                // 実際の気象庁データ受信開始
                 this.startRealTsunamiMonitoring();
                 
                 // UI統合
@@ -4966,7 +4966,7 @@
                 // 緊急対応システム開始
                 this.startEmergencyResponseSystem();
                 
-                console.log('✅ 実用津波監視システム準備完了 (60%機能達成)');
+                console.log('✅ 実用津波情報システム準備完了 (60%機能達成)');
             }
             
             /**
@@ -5142,7 +5142,7 @@
             startEmergencyResponseSystem() {
                 console.log('🚨 緊急対応・避難誘導システム開始');
                 
-                // リアルタイム津波監視強化
+                // リアルタイム津波情報取得強化
                 this.enhanceRealTimeMonitoring();
                 
                 // 自動避難経路案内準備
@@ -5158,7 +5158,7 @@
             }
             
             /**
-             * リアルタイム監視強化
+             * リアルタイム情報取得強化
              */
             enhanceRealTimeMonitoring() {
                 // より頻繁なデータ更新
@@ -5635,16 +5635,16 @@
             }
             
             /**
-             * 実用的な津波監視開始 (現実的手法)
+             * 実用的な津波情報取得開始 (現実的手法)
              */
             startRealTsunamiMonitoring() {
-                console.log('📡 実用津波監視開始 (P2P地震情報連携)');
+                console.log('📡 実用津波情報取得開始 (P2P地震情報連携)');
                 
                 try {
                     // P2P地震情報から津波リスク推定
                     this.enhanceEarthquakeDataWithTsunami();
                     
-                    // Yahoo!天気RSS監視 (CORS制限なし)
+                    // Yahoo!天気RSS取得 (CORS制限なし)
                     this.startWeatherRSSMonitoring();
                     
                     // 地震マグニチュード基準での津波リスク自動判定
@@ -5654,7 +5654,7 @@
                     this.updateSystemStatus('monitoring', '情報取得中');
                     
                 } catch (error) {
-                    console.error('❌ 実用監視開始失敗:', error);
+                    console.error('❌ 実用情報取得開始失敗:', error);
                     this.updateSystemStatus('error', '受信エラー');
                 }
             }
@@ -5906,7 +5906,7 @@
              * フォールバックモード
              */
             fallbackToLocalData() {
-                console.log('🔄 津波監視フォールバックモード起動');
+                console.log('🔄 津波情報フォールバックモード起動');
                 
                 // 既存のローカルデータシステムを使用
                 this.tsunamiManager.startPeriodicUpdate();
@@ -6220,7 +6220,7 @@
              * 津波状態変化処理
              */
             handleTsunamiStateChange(stats) {
-                // リアルタイム監視パネル更新
+                // リアルタイム情報パネル更新
                 const activeRegions = this.tsunamiManager.getActiveRegions();
                 
                 // 既存の表示関数を活用
@@ -6720,7 +6720,7 @@
                 tsunamiRegionsContainer.appendChild(regionItem);
             });
 
-            console.log(`🔄 リアルタイム監視パネル更新: ${activeAreas.length}地域表示`);
+            console.log(`🔄 リアルタイム情報パネル更新: ${activeAreas.length}地域表示`);
         }
         
         function selectEarthquake(id) {

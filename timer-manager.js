@@ -184,7 +184,7 @@ class TimerManager {
     }
     
     /**
-     * メモリ使用量の監視
+     * メモリ使用量の計測
      */
     getMemoryUsage() {
         return {

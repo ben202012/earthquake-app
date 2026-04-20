@@ -299,30 +299,30 @@ class JMAXMLClient {
     }
     
     /**
-     * リアルタイム監視開始
+     * リアルタイム情報取得開始
      */
     startRealTimeMonitoring() {
-        console.log('🔄 気象庁津波XMLリアルタイム監視開始');
-        
+        console.log('🔄 気象庁津波XMLリアルタイム情報取得開始');
+
         this.state.isActive = true;
         this.state.retryCount = 0;
-        
+
         // 即座に初回取得
         this.performUpdate();
-        
-        // 定期監視開始
+
+        // 定期取得開始
         this.updateTimer = setInterval(() => {
             this.performUpdate();
         }, this.config.updateInterval);
-        
+
         this.notifyStateChange();
     }
-    
+
     /**
-     * 監視停止
+     * 情報取得停止
      */
     stopRealTimeMonitoring() {
-        console.log('⏹️ 気象庁津波XMLリアルタイム監視停止');
+        console.log('⏹️ 気象庁津波XMLリアルタイム情報取得停止');
         
         this.state.isActive = false;
         

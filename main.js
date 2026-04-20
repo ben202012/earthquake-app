@@ -1,5 +1,5 @@
 /**
- * 地震監視システム メインスクリプト
+ * 地震情報システム メインスクリプト
  * CSPセキュリティ対応版
  */
 
@@ -12,7 +12,7 @@ function openSettings() {
 
 // DOMContentLoaded時の初期化
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🌏 地震監視システム v3.0 - 安全モードで起動中...');
+    console.log('🌏 地震情報システム v3.0 - 安全モードで起動中...');
     
     // クラスの存在確認
     if (typeof ProfessionalEarthquakeMonitor === 'undefined') {
@@ -24,9 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // メインモニター初期化
     try {
         window.monitor = new ProfessionalEarthquakeMonitor();
-        console.log('✅ 地震監視システム初期化完了');
+        console.log('✅ 地震情報システム初期化完了');
     } catch (error) {
-        console.error('❌ 地震監視システム初期化エラー:', error);
+        console.error('❌ 地震情報システム初期化エラー:', error);
         return;
     }
     
