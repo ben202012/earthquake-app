@@ -5185,47 +5185,7 @@
                 this.intervals.tsunamiMonitor = setInterval(() => {
                     this.checkCriticalTsunamiUpdates();
                 }, 30000); // 30秒毎
-                
-                // P2P地震情報の津波リスク即座評価
-                if (this.websocket) {
-                    const originalHandler = this.websocket.onmessage;
-                    this.websocket.onmessage = async (event) => {
-                        if (originalHandler) originalHandler(event);
-                        
-                        const data = JSON.parse(event.data);
-                        if (data.code === 551) {
-                            // リアルタイム津波リスク評価
-                            await this.performRealTimeTsunamiAssessment(data);
-                        }
-                    };
-                }
             }
-            
-            /**
-             * リアルタイム津波評価 - 削除: 予測エンジンが無効化されたため
-             */
-            /*
-            async performRealTimeTsunamiAssessment(earthquakeData) {
-                try {
-                    // 高精度予測エンジンで即座に評価
-                    const prediction = await this.tsunamiPredictionEngine.predictTsunami(earthquakeData);
-                    
-                    if (prediction.probability > 0.3) {
-                        console.log('⚡ 高リスク津波の可能性を検出 - 緊急評価実行');
-                        
-                        // 多地点検証で確認
-                        await this.multiSiteVerification.performRealtimeVerification(earthquakeData);
-                        
-                        // 高リスクの場合は即座に警報
-                        if (prediction.predictions.some(p => p.waveHeight > 1.0)) {
-                            this.triggerImmediateTsunamiAlert(prediction);
-                        }
-                    }
-                } catch (error) {
-                    console.error('❌ リアルタイム津波評価エラー:', error);
-                }
-            }
-            */
             
             /**
              * 避難経路準備
@@ -5614,11 +5574,13 @@
             }
             
             /**
-             * 避難先位置取得
+             * 避難先位置取得（プレースホルダ実装）
+             * 現状は現在地から北東 +0.01°(約1km)のダミー座標を返すのみで、
+             * 実際の避難所データや経路計算は未実装。実用化には自治体の
+             * 指定避難所データの統合が必要。
              */
             getRouteDestination(route, currentPos) {
-                // 簡易的な避難先位置を生成
-                const offset = 0.01; // 約1km
+                const offset = 0.01;
                 return {
                     lat: currentPos.lat + offset,
                     lon: currentPos.lon + offset
