@@ -1,15 +1,19 @@
 /**
- * 気象庁津波予報区TopoJSONローダー（製品版）
- * 89MB Shapefile → 1.5MB TopoJSON最適化済み
+ * 気象庁津波予報区GeoJSONローダー（製品版）
+ *
+ * 経緯: data/jma-tsunami-areas.topojson は arcs が絶対値(非差分)で格納された
+ * 仕様違反の TopoJSON だったため、scripts/convert_tsunami_topojson.py で
+ * 一度だけ正しい GeoJSON (data/jma-tsunami-areas.geojson) に変換して以降
+ * それを直接読み込むよう変更した。topojson.min.js への依存は不要。
  */
 
 class JMATsunamiLoader {
     constructor() {
-        this.dataUrl = './data/jma-tsunami-areas.topojson';
+        this.dataUrl = './data/jma-tsunami-areas.geojson';
         this.cache = null;
         this.loadStartTime = null;
     }
-    
+
     /**
      * 津波予報区データ読み込み
      * @returns {Object} GeoJSON Feature Collection
@@ -19,47 +23,41 @@ class JMATsunamiLoader {
             console.log('✅ キャッシュからJMA津波予報区データ取得');
             return this.cache;
         }
-        
+
         try {
             this.loadStartTime = performance.now();
-            console.log('🔄 気象庁津波予報区TopoJSONデータ読み込み開始...');
-            
-            // TopoJSONファイル取得
+            console.log('🔄 気象庁津波予報区GeoJSONデータ読み込み開始...');
+
+            // GeoJSONファイル取得
             const response = await fetch(this.dataUrl);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
-            const topoData = await response.json();
-            console.log('📊 TopoJSONデータ取得完了');
-            
-            // TopoJSON → GeoJSON変換
-            // オブジェクト名を正確に取得
-            const objectKeys = Object.keys(topoData.objects);
-            const objectName = objectKeys[0]; // 最初のオブジェクトを使用
-            console.log(`📋 TopoJSON オブジェクト名: ${objectName}`);
-            
-            const geoData = topojson.feature(topoData, topoData.objects[objectName]);
-            
+
+            const geoData = await response.json();
+            console.log('📊 GeoJSONデータ取得完了');
+
             // データ検証
             this.validateGeoData(geoData);
-            
+
             // キャッシュに保存
             this.cache = geoData;
-            
+
             const loadTime = Math.round(performance.now() - this.loadStartTime);
             console.log(`✅ JMA津波予報区データ読み込み完了`);
             console.log(`📈 パフォーマンス: ${loadTime}ms, ${geoData.features.length}地域`);
-            console.log(`💾 データソース: 気象庁公式津波予報区 (TopoJSON最適化)`);
-            
+            console.log(`💾 データソース: 気象庁公式津波予報区 (GeoJSON)`);
+
             return geoData;
-            
+
         } catch (error) {
             console.error('❌ 津波予報区データ読み込み失敗:', error);
             console.warn('🔄 フォールバックモードに切り替えます');
-            
-            // フォールバック：基本データセット
-            return this.getFallbackData();
+
+            // フォールバック：キャッシュにも保存して getActiveAreas() が動くようにする
+            const fallback = this.getFallbackData();
+            this.cache = fallback;
+            return fallback;
         }
     }
     
@@ -129,7 +127,8 @@ class JMATsunamiLoader {
      * @returns {boolean} 解除されている場合true
      */
     isStatusCleared(status) {
-        const clearedStatuses = ['cleared', 'cancelled', 'lifted', 'discontinued'];
+        // 'none' は平常時の初期値(警報未発令)。TV 同様、何も描画しない。
+        const clearedStatuses = ['none', 'cleared', 'cancelled', 'lifted', 'discontinued'];
         return clearedStatuses.includes(status);
     }
     

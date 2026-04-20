@@ -497,6 +497,9 @@
 
         .tsunami-regions {
             margin-bottom: 16px;
+            max-height: 260px;
+            overflow-y: auto;
+            padding-right: 4px;
         }
 
         .region-item {
@@ -1148,11 +1151,133 @@
             box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
         }
         
-        /* 津波エリアの標準表示 */
+        /* 津波予報区: 沿岸線に沿った太い色帯(TV 風表示) */
         .jma-tsunami-area {
-            stroke-width: 2px !important;
-            stroke-opacity: 0.8 !important;
-            fill-opacity: 0.6 !important;
+            stroke-width: 5px !important;
+            stroke-opacity: 1.0 !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+            fill-opacity: 0 !important; /* MultiLineString 前提。Polygon 誤投入時も塗らない */
+        }
+        /* 大津波警報・警報エリアの点滅アニメーション。
+           stroke-opacity は !important 衝突のため触らず、要素全体の opacity と
+           drop-shadow で脈動を表現する(@keyframes は !important を無視する仕様) */
+        /* 全レベル共通の周期・タイミングで同期点滅させる。
+           緊急度は不透明度の振れ幅とグロー強度で差別化する。 */
+        .jma-tsunami-area.jma-major_warning {
+            animation: tsunami-major-blink 1s ease-in-out infinite alternate;
+        }
+        .jma-tsunami-area.jma-warning {
+            animation: tsunami-warning-blink 1s ease-in-out infinite alternate;
+        }
+        .jma-tsunami-area.jma-advisory {
+            animation: tsunami-advisory-blink 1s ease-in-out infinite alternate;
+        }
+        @keyframes tsunami-major-blink {
+            from { opacity: 0.25; filter: drop-shadow(0 0 1px currentColor); }
+            to   { opacity: 1;    filter: drop-shadow(0 0 8px currentColor); }
+        }
+        @keyframes tsunami-warning-blink {
+            from { opacity: 0.15; filter: drop-shadow(0 0 1px currentColor); }
+            to   { opacity: 1;    filter: drop-shadow(0 0 5px currentColor); }
+        }
+        @keyframes tsunami-advisory-blink {
+            from { opacity: 0.2;  filter: drop-shadow(0 0 0 transparent); }
+            to   { opacity: 1;    filter: drop-shadow(0 0 3px currentColor); }
+        }
+
+        /* ===== TV風 津波警報テロップ(画面下部横スクロール) ===== */
+        .tsunami-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 46px;
+            display: none;               /* JS 側で flex に切替 */
+            align-items: center;
+            background: linear-gradient(90deg, #2a0000 0%, #4a0000 50%, #2a0000 100%);
+            color: #fff;
+            z-index: 9999;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            font-weight: 700;
+            overflow: hidden;
+            box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.6);
+            border-top: 3px solid #FFD700;
+        }
+        .tsunami-ticker.level-major_warning { border-top-color: #B14ABA; animation: ticker-pulse-border 1s ease-in-out infinite alternate; }
+        .tsunami-ticker.level-warning       { border-top-color: #FF2800; animation: ticker-pulse-border 1s ease-in-out infinite alternate; }
+        .tsunami-ticker.level-advisory      { border-top-color: #F2E700; }
+        @keyframes ticker-pulse-border {
+            from { box-shadow: 0 -6px 20px rgba(0,0,0,0.6), inset 0 3px 0 rgba(255,255,255,0.1); }
+            to   { box-shadow: 0 -6px 28px currentColor,   inset 0 3px 0 rgba(255,255,255,0.4); }
+        }
+        .tsunami-ticker .ticker-label {
+            flex-shrink: 0;
+            height: 100%;
+            padding: 0 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.55);
+            font-size: 15px;
+            letter-spacing: 0.08em;
+            border-right: 2px solid rgba(255, 255, 255, 0.15);
+            text-shadow: 0 0 6px currentColor;
+        }
+        .tsunami-ticker.level-major_warning .ticker-label { color: #ff9dff; }
+        .tsunami-ticker.level-warning       .ticker-label { color: #ffa077; }
+        .tsunami-ticker.level-advisory      .ticker-label { color: #fff08c; }
+        .tsunami-ticker .ticker-time {
+            flex-shrink: 0;
+            padding: 0 14px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: #bbb;
+            background: rgba(0, 0, 0, 0.35);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            letter-spacing: 0.04em;
+        }
+        .tsunami-ticker .ticker-track {
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .tsunami-ticker .ticker-content {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            animation: ticker-scroll 45s linear infinite;
+            padding-left: 100%;           /* 右端から流し始める */
+            font-size: 14px;
+            line-height: 1;
+        }
+        .tsunami-ticker .ticker-item {
+            display: inline-block;
+            padding: 0 22px;
+        }
+        .tsunami-ticker .ticker-item .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-right: 8px;
+            font-size: 12px;
+            letter-spacing: 0.05em;
+        }
+        .tsunami-ticker .ticker-item.level-major_warning .tag { background: #B14ABA; color: #fff; }
+        .tsunami-ticker .ticker-item.level-warning       .tag { background: #FF2800; color: #fff; }
+        .tsunami-ticker .ticker-item.level-advisory      .tag { background: #F2E700; color: #333; }
+        .tsunami-ticker .ticker-item .area  { font-weight: 800; margin-right: 8px; }
+        .tsunami-ticker .ticker-item .wave  { color: #ffd18c; margin-right: 8px; font-variant-numeric: tabular-nums; }
+        .tsunami-ticker .ticker-item .eta   { color: #ccc; font-size: 13px; }
+        .tsunami-ticker .ticker-item .sep   { color: rgba(255, 255, 255, 0.25); margin-left: 22px; }
+        @keyframes ticker-scroll {
+            from { transform: translate(0%, -50%); }
+            to   { transform: translate(-100%, -50%); }
         }
         
         /* 日本都市マーカーの表示 */
@@ -1498,53 +1623,10 @@
                                 <div class="level-indicator"></div>
                                 <div class="level-text">津波注意報</div>
                             </div>
-                            <div class="tsunami-time">発表: 30日20:45 JST</div>
+                            <div class="tsunami-time">発表: -</div>
                         </div>
-                        
-                        <div class="tsunami-regions">
-                            <div class="region-item advisory">
-                                <div class="region-name">北海道太平洋沿岸東部</div>
-                                <div class="region-info">
-                                    <span class="wave-height">1m</span>
-                                    <span class="arrival-time">既に到達と推定</span>
-                                </div>
-                            </div>
-                            <div class="region-item advisory">
-                                <div class="region-name">北海道太平洋沿岸中部</div>
-                                <div class="region-info">
-                                    <span class="wave-height">1m</span>
-                                    <span class="arrival-time">既に到達と推定</span>
-                                </div>
-                            </div>
-                            <div class="region-item advisory">
-                                <div class="region-name">青森県太平洋沿岸</div>
-                                <div class="region-info">
-                                    <span class="wave-height">1m</span>
-                                    <span class="arrival-time">既に到達と推定</span>
-                                </div>
-                            </div>
-                            <div class="region-item advisory">
-                                <div class="region-name">岩手県</div>
-                                <div class="region-info">
-                                    <span class="wave-height">1m</span>
-                                    <span class="arrival-time">既に到達と推定</span>
-                                </div>
-                            </div>
-                            <div class="region-item advisory">
-                                <div class="region-name">宮城県</div>
-                                <div class="region-info">
-                                    <span class="wave-height">1m</span>
-                                    <span class="arrival-time">既に到達と推定</span>
-                                </div>
-                            </div>
-                            <div class="region-item advisory">
-                                <div class="region-name">小笠原諸島</div>
-                                <div class="region-info">
-                                    <span class="wave-height">1m</span>
-                                    <span class="arrival-time">既に到達と推定</span>
-                                </div>
-                            </div>
-                        </div>
+
+                        <div class="tsunami-regions"></div>
                         
                         <div class="tsunami-actions">
                             <button class="action-btn" id="tsunami-sound-toggle">🔊 音声通知 ON</button>
@@ -2147,33 +2229,43 @@
                 console.log('✅ テスト境界表示完了 - 赤い円が見えるはずです');
             }
 
-            // 気象庁公式TopoJSON津波予報区データ使用（89MB→1.5MB最適化済み）
+            // 気象庁公式 津波予報区データ(GeoJSON)読み込み&描画。
+            // 平常時は STATUS='none' のため何も描画されない。
+            // 警報・注意報が入ると activeAreas が非空になり該当沿岸のみ発光する。
+            // 再描画時(simulateTsunamiAlerts 等)のために冪等性を確保している。
             async addTsunamiCoastlines() {
+                // 既存レイヤーと凡例をクリア(再描画対応)
+                if (this.tsunamiLayers) {
+                    this.tsunamiLayers.forEach(entry => {
+                        if (entry.layer && this.map) this.map.removeLayer(entry.layer);
+                    });
+                }
                 this.tsunamiLayers = [];
-                
+                if (this.tsunamiLegend && this.map) {
+                    this.map.removeControl(this.tsunamiLegend);
+                    this.tsunamiLegend = null;
+                }
+
                 try {
                     console.log('🔄 気象庁公式津波予報区データ読み込み中...');
-                    
-                    // 製品版モード: 気象庁公式TopoJSONデータ使用  
-                    const demoMode = true; // 一時的にデモモードに変更してテスト
-                    
+
+                    const demoMode = false; // 製品版: data/jma-tsunami-areas.geojson を使用
+
                     let tsunamiData;
-                    
-                    const loader = new JMATsunamiLoader();
+
+                    // ローダーをインスタンスプロパティに保持(simulateTsunamiAlerts から参照)
+                    if (!this.tsunamiLoader) {
+                        this.tsunamiLoader = new JMATsunamiLoader();
+                    }
+                    const loader = this.tsunamiLoader;
                     let allTsunamiData;
-                    
+
                     if (demoMode) {
-                        // デモ用：フォールバックデータを直接使用
                         allTsunamiData = loader.getFallbackData();
-                        // キャッシュに手動で保存
                         loader.cache = allTsunamiData;
                         console.log('📋 デモモード: フォールバックデータ使用');
-                        
                     } else {
-                        // 製品版：TopoJSONローダー使用
                         allTsunamiData = await loader.loadTsunamiAreas();
-                        
-                        // 統計情報表示
                         const stats = loader.getStatistics();
                         console.log('📊 津波予報区統計:', stats);
                         console.log('✅ 気象庁公式データ読み込み完了');
@@ -2219,15 +2311,26 @@
                     }
                     
                     // GeoJSONレイヤー作成
+                    // 警報レベル別カラー(気象庁/NHK準拠)
+                    const TSUNAMI_STATUS_COLORS = {
+                        major_warning: '#B14ABA', // 大津波警報: 紫
+                        warning:       '#FF2800', // 津波警報: 赤
+                        advisory:      '#F2E700', // 津波注意報: 黄
+                        forecast:      '#90EE90', // 津波予報: 緑
+                        cleared:       '#808080', // 解除: 灰
+                        cancelled:     '#808080',
+                        lifted:        '#808080'
+                    };
                     const tsunamiGeoJSON = L.geoJSON(tsunamiData, {
                         style: (feature) => {
                             const status = feature.properties.STATUS || 'advisory';
+                            const color = TSUNAMI_STATUS_COLORS[status] || TSUNAMI_STATUS_COLORS.advisory;
                             return {
-                                color: '#FFD700',           // 気象庁標準黄色
-                                weight: 2,
-                                opacity: 0.9,
-                                fillColor: '#FFD700',
-                                fillOpacity: 0.6,
+                                color: color,
+                                weight: 5,       // CSS .jma-tsunami-area 側でも !important 指定あり
+                                opacity: 1.0,
+                                fillColor: color,
+                                fillOpacity: 0,  // MultiLineString のため塗りつぶしなし
                                 className: `jma-tsunami-area jma-${status}`
                             };
                         },
@@ -2279,8 +2382,10 @@
                         }
                     }).addTo(this.map);
                     
-                    // 気象庁風レジェンド追加
+                    // 気象庁風レジェンド追加 → 凡例生成後に実カウントを反映
                     this.addJMATsunamiLegend();
+                    const legendCount = document.getElementById('tsunami-area-count');
+                    if (legendCount) legendCount.textContent = activeAreas.length;
                     
                     // KyoshinEewViewer風スタイル適用
                     this.addKyoshinEewViewerStyles();
@@ -2347,7 +2452,8 @@
                     
                     const countSpan = document.createElement('span');
                     countSpan.id = 'tsunami-area-count';
-                    countSpan.textContent = '9';
+                    // 実カウントは addTsunamiCoastlines 側で上書きされる(初期値ダッシュ)
+                    countSpan.textContent = '-';
                     
                     itemDiv.appendChild(colorSpan);
                     itemDiv.appendChild(document.createTextNode('津波注意報 ('));
@@ -6350,74 +6456,208 @@
             const tsunamiPanel = document.querySelector('.tsunami-warning-panel');
             const tsunamiSectionTitle = document.getElementById('tsunami-section-title');
             
+            // 警報レベル別の見出し・優先度定義
+            const LEVEL_META = {
+                major_warning: { priority: 3, cssClass: 'major-warning', label: '大津波警報', icon: '🚨' },
+                warning:       { priority: 2, cssClass: 'warning',       label: '津波警報',   icon: '⚠️' },
+                advisory:      { priority: 1, cssClass: 'advisory',      label: '津波注意報', icon: '🌊' },
+                forecast:      { priority: 0, cssClass: 'advisory',      label: '津波予報',   icon: '📢' }
+            };
+
             if (activeAreas.length === 0) {
                 // 津波注意報が完全に解除された場合
                 if (tsunamiPanel) {
                     tsunamiPanel.style.display = 'none';
                 }
-                
-                // セクションタイトルを変更
                 if (tsunamiSectionTitle) {
                     tsunamiSectionTitle.textContent = '✅ 津波情報なし';
                     tsunamiSectionTitle.style.color = '#4CAF50';
                 }
-                
+                updateTsunamiTicker([], null);
                 console.log('🚫 津波注意報完全解除: パネル非表示・タイトル変更');
-                
             } else {
-                // アクティブな津波注意報がある場合は表示
+                // アクティブな地域の中から最高警報レベルを特定
+                let top = LEVEL_META.advisory;
+                let latestIssued = null;
+                for (const f of activeAreas) {
+                    const meta = LEVEL_META[f.properties.STATUS];
+                    if (meta && meta.priority > top.priority) top = meta;
+                    const issued = f.properties.ISSUED_AT;
+                    if (issued && (!latestIssued || issued > latestIssued)) latestIssued = issued;
+                }
+
                 if (tsunamiPanel) {
                     tsunamiPanel.style.display = 'block';
                 }
-                
-                // セクションタイトルを元に戻す
                 if (tsunamiSectionTitle) {
-                    tsunamiSectionTitle.textContent = '🌊 津波警報・注意報';
+                    tsunamiSectionTitle.textContent = `${top.icon} ${top.label}`;
                     tsunamiSectionTitle.style.color = '';
                 }
-                
-                console.log(`🌊 津波注意報アクティブ: ${activeAreas.length}地域`);
+
+                // ステータスバー(#tsunami-level)も実レベルに差し替え
+                const levelEl = document.getElementById('tsunami-level');
+                if (levelEl) {
+                    levelEl.className = `tsunami-level ${top.cssClass}`;
+                    const levelText = levelEl.querySelector('.level-text');
+                    if (levelText) levelText.textContent = top.label;
+                }
+                // 発表時刻を現在時刻に更新(JST)
+                const timeEl = document.querySelector('.tsunami-time');
+                if (timeEl) {
+                    const d = latestIssued ? new Date(latestIssued) : new Date();
+                    const jst = new Date(d.getTime() + 9 * 3600000);
+                    const hh = String(jst.getUTCHours()).padStart(2, '0');
+                    const mm = String(jst.getUTCMinutes()).padStart(2, '0');
+                    const dd = String(jst.getUTCDate()).padStart(2, '0');
+                    timeEl.textContent = `発表: ${dd}日 ${hh}:${mm} JST`;
+                }
+
+                updateTsunamiTicker(activeAreas, top, latestIssued);
+                console.log(`🌊 ${top.label}: ${activeAreas.length}地域`);
             }
         }
-        
+
+        // TV風の下部テロップ(横スクロール)を更新
+        function updateTsunamiTicker(activeAreas, topMeta, latestIssued) {
+            const ticker = document.getElementById('tsunami-ticker');
+            const labelEl = document.getElementById('tsunami-ticker-label');
+            const timeEl = document.getElementById('tsunami-ticker-time');
+            const contentEl = document.getElementById('tsunami-ticker-content');
+            if (!ticker || !contentEl) return;
+
+            if (!activeAreas || activeAreas.length === 0 || !topMeta) {
+                ticker.style.display = 'none';
+                contentEl.innerHTML = '';
+                return;
+            }
+
+            const TICKER_META = {
+                major_warning: { key: 'major_warning', tag: '大津波警報', defaultWave: '10m超', defaultTime: '直ちに避難',   priority: 3 },
+                warning:       { key: 'warning',       tag: '津波警報',   defaultWave: '3m',    defaultTime: '間もなく到達', priority: 2 },
+                advisory:      { key: 'advisory',      tag: '津波注意報', defaultWave: '1m',    defaultTime: '既に到達と推定', priority: 1 },
+                forecast:      { key: 'advisory',      tag: '津波予報',   defaultWave: '0.2m',  defaultTime: '予報',           priority: 0 }
+            };
+            const sorted = [...activeAreas].sort((a, b) => {
+                const pa = TICKER_META[a.properties.STATUS]?.priority ?? -1;
+                const pb = TICKER_META[b.properties.STATUS]?.priority ?? -1;
+                return pb - pa;
+            });
+
+            // ラベル・時刻
+            labelEl.textContent = `${topMeta.icon} ${topMeta.label} 発令中`;
+            const d = latestIssued ? new Date(latestIssued) : new Date();
+            const jst = new Date(d.getTime() + 9 * 3600000);
+            const hh = String(jst.getUTCHours()).padStart(2, '0');
+            const mm = String(jst.getUTCMinutes()).padStart(2, '0');
+            const dd = String(jst.getUTCDate()).padStart(2, '0');
+            timeEl.textContent = `発表 ${dd}日 ${hh}:${mm} JST`;
+
+            // テロップ要素構築(innerHTML を使わず createElement で XSS 安全)
+            const buildItems = () => {
+                const frag = document.createDocumentFragment();
+                sorted.forEach((feature, idx) => {
+                    const p = feature.properties;
+                    const meta = TICKER_META[p.STATUS] || TICKER_META.advisory;
+                    const item = document.createElement('span');
+                    item.className = `ticker-item level-${meta.key}`;
+
+                    const tag = document.createElement('span');
+                    tag.className = 'tag';
+                    tag.textContent = meta.tag;
+                    item.appendChild(tag);
+
+                    const area = document.createElement('span');
+                    area.className = 'area';
+                    area.textContent = p.AREA_NAME || '';
+                    item.appendChild(area);
+
+                    const wave = document.createElement('span');
+                    wave.className = 'wave';
+                    wave.textContent = `予想高: ${p.WAVE_HEIGHT || meta.defaultWave}`;
+                    item.appendChild(wave);
+
+                    const eta = document.createElement('span');
+                    eta.className = 'eta';
+                    eta.textContent = p.ARRIVAL_TIME || meta.defaultTime;
+                    item.appendChild(eta);
+
+                    frag.appendChild(item);
+                    if (idx < sorted.length - 1) {
+                        const sep = document.createElement('span');
+                        sep.className = 'sep';
+                        sep.textContent = '◆';
+                        frag.appendChild(sep);
+                    }
+                });
+                return frag;
+            };
+
+            contentEl.innerHTML = '';
+            contentEl.appendChild(buildItems());
+            // シームレスループ用に 2 周目を連結(最後にビッグセパレータ)
+            const gap = document.createElement('span');
+            gap.className = 'sep';
+            gap.textContent = '◆◆◆';
+            contentEl.appendChild(gap);
+            contentEl.appendChild(buildItems());
+
+            // 最高レベルに応じてクラス切替(枠色が紫/赤/黄に変わる)
+            ticker.className = `tsunami-ticker level-${topMeta.cssClass === 'major-warning' ? 'major_warning' : topMeta.cssClass}`;
+            ticker.style.display = 'flex';
+        }
+
         function updateTsunamiRegionsPanel(activeAreas) {
             const tsunamiRegionsContainer = document.querySelector('.tsunami-regions');
             if (!tsunamiRegionsContainer) return;
-            
+
+            // 警報レベル別のスタイル・優先度・デフォルト値
+            const REGION_META = {
+                major_warning: { priority: 3, cssClass: 'major-warning', defaultWave: '10m超', defaultTime: '直ちに避難' },
+                warning:       { priority: 2, cssClass: 'warning',       defaultWave: '3m',    defaultTime: '間もなく到達' },
+                advisory:      { priority: 1, cssClass: 'advisory',      defaultWave: '1m',    defaultTime: '既に到達と推定' },
+                forecast:      { priority: 0, cssClass: 'advisory',      defaultWave: '0.2m',  defaultTime: '予報' }
+            };
+
+            // 優先度の高い順にソート(大津波警報 → 警報 → 注意報)
+            const sorted = [...activeAreas].sort((a, b) => {
+                const pa = REGION_META[a.properties.STATUS]?.priority ?? -1;
+                const pb = REGION_META[b.properties.STATUS]?.priority ?? -1;
+                return pb - pa;
+            });
+
             // 既存の地域アイテムをクリア
             tsunamiRegionsContainer.innerHTML = '';
-            
-            // アクティブな地域のみを表示 - XSS対策: 安全なDOM操作を使用
-            activeAreas.forEach(feature => {
+
+            sorted.forEach(feature => {
                 const props = feature.properties;
+                const meta = REGION_META[props.STATUS] || REGION_META.advisory;
+
                 const regionItem = document.createElement('div');
-                regionItem.className = 'region-item advisory';
-                
-                // 地域名
+                regionItem.className = `region-item ${meta.cssClass}`;
+
                 const regionName = document.createElement('div');
                 regionName.className = 'region-name';
                 regionName.textContent = props.AREA_NAME || '';
-                
-                // 地域情報
+
                 const regionInfo = document.createElement('div');
                 regionInfo.className = 'region-info';
-                
+
                 const waveHeight = document.createElement('span');
                 waveHeight.className = 'wave-height';
-                waveHeight.textContent = props.WAVE_HEIGHT || '1m';
-                
+                waveHeight.textContent = props.WAVE_HEIGHT || meta.defaultWave;
+
                 const arrivalTime = document.createElement('span');
                 arrivalTime.className = 'arrival-time';
-                arrivalTime.textContent = props.ARRIVAL_TIME || '既に到達と推定';
-                
+                arrivalTime.textContent = props.ARRIVAL_TIME || meta.defaultTime;
+
                 regionInfo.appendChild(waveHeight);
                 regionInfo.appendChild(arrivalTime);
                 regionItem.appendChild(regionName);
                 regionItem.appendChild(regionInfo);
-                
+
                 tsunamiRegionsContainer.appendChild(regionItem);
             });
-            
+
             console.log(`🔄 リアルタイム監視パネル更新: ${activeAreas.length}地域表示`);
         }
         
@@ -6442,6 +6682,14 @@
         // 本番環境用初期化完了
         console.log('✅ ProfessionalEarthquakeMonitorクラス定義完了');
     </script>
+    <!-- TV風 津波警報テロップ(警報時のみ updateTsunamiTicker() で表示) -->
+    <div class="tsunami-ticker" id="tsunami-ticker" aria-live="polite">
+        <div class="ticker-label" id="tsunami-ticker-label"></div>
+        <div class="ticker-time" id="tsunami-ticker-time"></div>
+        <div class="ticker-track">
+            <div class="ticker-content" id="tsunami-ticker-content"></div>
+        </div>
+    </div>
     <!-- セキュア初期化スクリプト（外部ファイル） -->
     <script src="main.js"></script>
 </body>
