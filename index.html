@@ -1766,7 +1766,8 @@
                     // 非同期でデータ読み込みとWebSocket接続
                     Promise.all([
                         this.loadHistoricalData(),
-                        this.connectWebSocketAsync()
+                        this.connectWebSocketAsync(),
+                        this.fetchLatestTsunamiInfo()   // P2P code 552 の最新履歴を取得して初期状態反映
                     ]).then(() => {
                         console.log('✅ All background tasks completed');
                         this.updateConnectionStatus('api-status', true);
@@ -3079,26 +3080,145 @@
                 if (data.code === 551) { // 地震情報
                     const earthquake = this.parseEarthquakeData(data);
                     this.earthquakeHistory.unshift(earthquake);
-                    
+
                     // 履歴を最新10件に制限
                     if (this.earthquakeHistory.length > 10) {
                         this.earthquakeHistory = this.earthquakeHistory.slice(0, 10);
                     }
-                    
+
                     this.updateEarthquakeDisplay();
                     this.updateMapMarkers();
                     this.updateOverlayInfo(earthquake);
                     this.updateStatistics(earthquake);
-                    
+
                     // 通知条件のチェック
                     this.checkAndSendNotification(earthquake);
-                    
-                    this.addActivityFeedItem('🔴', 
-                        `地震発生: ${earthquake.location} M${earthquake.magnitude} 震度${earthquake.maxIntensity}`, 
+
+                    this.addActivityFeedItem('🔴',
+                        `地震発生: ${earthquake.location} M${earthquake.magnitude} 震度${earthquake.maxIntensity}`,
                         new Date()
                     );
-                    
+
                     console.log(`🌏 Earthquake detected: ${earthquake.location} M${earthquake.magnitude}`);
+                } else if (data.code === 552) { // 津波情報
+                    this.handleTsunamiMessage(data);
+                }
+            }
+
+            /**
+             * P2P code 552(津波情報)を受信して地図・警報音に反映する。
+             * ライブ WebSocket と初期 REST 履歴の両方から呼ばれる共通経路。
+             */
+            async handleTsunamiMessage(data) {
+                await this.applyP2PTsunamiMessage(data);
+                const issueTime = data.issue?.time ? new Date(data.issue.time.replace(/\//g, '-') + '+09:00') : new Date();
+                if (data.cancelled) {
+                    this.addActivityFeedItem('🟢', '津波情報: 全地域解除', issueTime);
+                } else if (Array.isArray(data.areas) && data.areas.length > 0) {
+                    const GRADE_LABEL = { MajorWarning: '🚨 大津波警報', Warning: '⚠️ 津波警報', Watch: '🌊 津波注意報' };
+                    const priority = { MajorWarning: 3, Warning: 2, Watch: 1 };
+                    let top = null;
+                    for (const a of data.areas) {
+                        if (!top || (priority[a.grade] || 0) > (priority[top] || 0)) top = a.grade;
+                    }
+                    const label = GRADE_LABEL[top] || '🌊 津波情報';
+                    this.addActivityFeedItem('🌊', `${label} 発令: ${data.areas.length}地域`, issueTime);
+                }
+            }
+
+            /**
+             * P2P 552 メッセージを tsunamiLoader.cache に反映して再描画 + 音声発報。
+             * P2P の grade (Watch/Warning/MajorWarning) を内部 STATUS にマッピング。
+             * 地域名は気象庁公式と一致しているので AREA_NAME で lookup する。
+             */
+            async applyP2PTsunamiMessage(data) {
+                if (!this.tsunamiLoader || !this.tsunamiLoader.cache) {
+                    console.warn('⚠️ tsunamiLoader 未準備のため P2P 552 をスキップ');
+                    return;
+                }
+                const GRADE_TO_STATUS = {
+                    MajorWarning: 'major_warning',
+                    Warning:      'warning',
+                    Watch:        'advisory',
+                    Unknown:      'advisory'
+                };
+                const features = this.tsunamiLoader.cache.features;
+                // 全件リセット
+                for (const f of features) {
+                    f.properties.STATUS = 'none';
+                    f.properties.WAVE_HEIGHT = '';
+                    f.properties.ARRIVAL_TIME = '';
+                }
+
+                // 解除(cancelled=true または areas 空)
+                if (data.cancelled || !Array.isArray(data.areas) || data.areas.length === 0) {
+                    if (window.audioAlertSystem) window.audioAlertSystem.stopAllAlerts();
+                    await this.addTsunamiCoastlines();
+                    console.log('🟢 P2P 552 解除: 地図クリア');
+                    return;
+                }
+
+                // 各 area を適用
+                const priority = { major_warning: 3, warning: 2, advisory: 1 };
+                const issuedAt = data.issue?.time
+                    ? new Date(data.issue.time.replace(/\//g, '-') + '+09:00').toISOString()
+                    : new Date().toISOString();
+                let topLevel = null;
+                let applied = 0;
+                const unmatched = [];
+                for (const area of data.areas) {
+                    const status = GRADE_TO_STATUS[area.grade] || 'advisory';
+                    const target = features.find(f => f.properties.AREA_NAME === area.name);
+                    if (!target) { unmatched.push(area.name); continue; }
+                    target.properties.STATUS = status;
+                    target.properties.WAVE_HEIGHT = area.maxHeight?.description || '';
+                    target.properties.ARRIVAL_TIME = area.firstHeight?.condition || (area.immediate ? '既に到達' : '');
+                    target.properties.ISSUED_AT = issuedAt;
+                    applied++;
+                    if (!topLevel || (priority[status] || 0) > (priority[topLevel] || 0)) topLevel = status;
+                }
+                if (unmatched.length) console.warn('⚠️ P2P 地域名マッチング失敗:', unmatched);
+
+                await this.addTsunamiCoastlines();
+                console.log(`🌊 P2P 552 適用: ${applied}地域 (最高レベル: ${topLevel})`);
+
+                if (topLevel && window.audioAlertSystem) {
+                    try {
+                        window.audioAlertSystem.stopAllAlerts();
+                        await window.audioAlertSystem.playAlert(topLevel);
+                    } catch (e) {
+                        console.warn('⚠️ 警報音再生失敗:', e.message);
+                    }
+                }
+            }
+
+            /**
+             * 起動直後に現在有効な津波情報を 1 件取得して即反映する。
+             * WebSocket は新着メッセージのみ流れてくるので、これを呼ばないと
+             * ページ読込時に既存の注意報が表示されない。
+             */
+            async fetchLatestTsunamiInfo() {
+                // tsunamiLoader の cache が埋まるまで最大 10 秒待機
+                for (let i = 0; i < 20 && !this.tsunamiLoader?.cache; i++) {
+                    await new Promise(r => setTimeout(r, 500));
+                }
+                if (!this.tsunamiLoader?.cache) {
+                    console.warn('⚠️ tsunamiLoader ready timeout');
+                    return;
+                }
+                try {
+                    const res = await fetch('https://api.p2pquake.net/v2/history?codes=552&limit=1');
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const arr = await res.json();
+                    if (!Array.isArray(arr) || arr.length === 0) {
+                        console.log('📡 P2P 津波履歴: 該当なし');
+                        return;
+                    }
+                    const msg = arr[0];
+                    console.log(`📡 P2P 津波履歴取得: ${msg.issue?.time} (${msg.cancelled ? '解除済' : (msg.areas?.length || 0) + '地域'})`);
+                    await this.handleTsunamiMessage(msg);
+                } catch (e) {
+                    console.warn('⚠️ P2P 津波履歴取得失敗:', e.message);
                 }
             }
             
