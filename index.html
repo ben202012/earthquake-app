@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地震監視システム - Professional Dashboard</title>
+    <title>地震情報システム - Professional Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <style>
-        /* === プロフェッショナル地震監視システム CSS === */
+        /* === プロフェッショナル地震情報システム CSS === */
         
         /* リセット & 基本設定 */
         * {
@@ -1485,7 +1485,7 @@
         <header class="main-header">
             <div class="header-left">
                 <div class="app-logo">🌏</div>
-                <h1 class="app-title">地震監視システム</h1>
+                <h1 class="app-title">地震情報システム</h1>
             </div>
             
             <div class="header-center">
@@ -1582,15 +1582,6 @@
             </div>
             
             <div class="monitoring-panel">
-                <!-- リアルタイム時計 -->
-                <div class="monitoring-section">
-                    <div class="monitoring-title">システム時刻</div>
-                    <div class="real-time-clock">
-                        <div class="clock-display" id="system-clock">--:--:--</div>
-                        <div class="clock-date" id="system-date">----/--/--</div>
-                    </div>
-                </div>
-                
                 <!-- メトリクス -->
                 <div class="monitoring-section">
                     <div class="monitoring-title">パフォーマンス</div>
@@ -1684,7 +1675,7 @@
     <script src="multi-site-verification.js"></script>
 
     <script>
-        // プロフェッショナル地震監視システム
+        // プロフェッショナル地震情報システム
         class ProfessionalEarthquakeMonitor {
             constructor() {
                 this.startTime = new Date();
@@ -1740,7 +1731,7 @@
                 try {
                     // DOM要素の存在確認
                     const requiredElements = [
-                        'current-time', 'system-clock', 'system-date', 'uptime',
+                        'current-time', 'uptime',
                         'latitude', 'longitude', 'depth', 'magnitude'
                     ];
                     
@@ -1823,17 +1814,6 @@
                     const currentTimeEl = document.getElementById('current-time');
                     if (currentTimeEl) {
                         currentTimeEl.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
-                    }
-                    
-                    // システム時計
-                    const systemClockEl = document.getElementById('system-clock');
-                    if (systemClockEl) {
-                        systemClockEl.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
-                    }
-                    
-                    const systemDateEl = document.getElementById('system-date');
-                    if (systemDateEl) {
-                        systemDateEl.textContent = now.toLocaleDateString('ja-JP');
                     }
                     
                     // 稼働時間
@@ -4641,7 +4621,7 @@
             // テスト機能
             testNotification() {
                 if (Notification.permission === 'granted') {
-                    new Notification('🌏 地震監視システム', {
+                    new Notification('🌏 地震情報システム', {
                         body: 'テスト通知が正常に送信されました。\nM4.5 テスト地震 震度3',
                         icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM3NGI5ZmYiLz4KPHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPC9zdmc+Cjwvc3ZnPgo='
                     });
