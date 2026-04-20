@@ -1537,7 +1537,7 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="week-count">0</div>
-                        <div class="stat-label">今週の地震</div>
+                        <div class="stat-label">過去１週間の地震</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="max-intensity">-</div>
@@ -3061,7 +3061,7 @@
                     const earthquake = this.parseEarthquakeData(data);
                     this.earthquakeHistory.unshift(earthquake);
 
-                    // 履歴を最新100件に制限（今週の最大震度・統計の正確性確保のため）
+                    // 履歴を最新100件に制限（過去１週間の最大震度・統計の正確性確保のため）
                     if (this.earthquakeHistory.length > 100) {
                         this.earthquakeHistory = this.earthquakeHistory.slice(0, 100);
                     }
@@ -3390,7 +3390,7 @@
                     eq.time >= today
                 ).length;
 
-                // 今週の地震数
+                // 過去１週間の地震数
                 this.stats.weekCount = this.earthquakeHistory.filter(eq => 
                     eq.time >= weekAgo
                 ).length;
