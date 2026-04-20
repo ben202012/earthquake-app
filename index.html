@@ -1528,7 +1528,7 @@
             <div class="sidebar-section">
                 <div class="section-title">
                     <span class="section-icon">📊</span>
-                    監視統計
+                    情報統計
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -1576,7 +1576,7 @@
         <aside class="right-panel">
             <div class="panel-header">
                 <h2 class="panel-title">
-                    📡 リアルタイム監視
+                    📡 リアルタイム情報
                     <span class="live-indicator">LIVE</span>
                 </h2>
             </div>
@@ -5651,11 +5651,11 @@
                     this.startEarthquakeTsunamiCorrelation();
                     
                     // システム状態をUI に反映
-                    this.updateSystemStatus('monitoring', '実用監視中');
+                    this.updateSystemStatus('monitoring', '情報取得中');
                     
                 } catch (error) {
                     console.error('❌ 実用監視開始失敗:', error);
-                    this.updateSystemStatus('error', '監視エラー');
+                    this.updateSystemStatus('error', '受信エラー');
                 }
             }
             
@@ -5912,10 +5912,10 @@
                 this.tsunamiManager.startPeriodicUpdate();
                 
                 // ユーザーに通知
-                this.showNotification('気象庁との接続に問題があります。ローカルデータで監視を継続します。', 'warning');
+                this.showNotification('気象庁との接続に問題があります。ローカルデータで情報取得を継続します。', 'warning');
                 
                 // システム状態更新
-                this.updateSystemStatus('fallback', 'フォールバック監視中');
+                this.updateSystemStatus('fallback', 'フォールバック動作中');
             }
             
             /**
@@ -6011,7 +6011,7 @@
                 statusIndicator.className = 'stat-item';
                 statusIndicator.innerHTML = `
                     <div class="stat-value" id="tsunami-status-value">準備中</div>
-                    <div class="stat-label">津波監視</div>
+                    <div class="stat-label">津波情報</div>
                 `;
                 
                 performanceSection.appendChild(statusIndicator);
@@ -6119,7 +6119,7 @@
                 console.log('✅ 津波緊急状態解除');
                 
                 // システム状態を通常に戻す
-                this.updateSystemStatus('monitoring', '津波監視中');
+                this.updateSystemStatus('monitoring', '津波情報取得中');
                 
                 // 通常運転に復帰
                 this.resumeNormalOperations();
