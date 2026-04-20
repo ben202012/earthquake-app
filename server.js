@@ -430,7 +430,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, () => {
-    console.log(`🌏 地震監視システム v3.3 サーバーが起動しました`);
+    console.log(`🌏 地震・津波情報表示システム v3.3 サーバーが起動しました`);
     console.log(`📍 アクセスURL: http://localhost:${port}`);
     console.log(`🔧 メインアプリ: http://localhost:${port}/index.html`);
     console.log(`🧪 音声テスト: http://localhost:${port}/audio-test.html`);
