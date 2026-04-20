@@ -231,10 +231,35 @@
 
 ---
 
-**最終更新**: 2024年12月19日  
-**実装担当**: AI Assistant (Claude 3.5 Sonnet)  
-**バージョン**: v3.1.0 - 実用機能95%達成版（セキュリティ強化）  
-**実装言語**: JavaScript, HTML5, CSS3, Node.js  
-**セキュリティレベル**: エンタープライズグレード（XSS対策・CSP厳格化・メモリリーク対策）  
-**品質保証**: 統一エラーハンドリング・データ検証強化・設定管理統一  
+**最終更新**: 2026年4月20日(v3.3 追記)
+**実装担当**: AI Assistant (Claude 3.5 Sonnet → Claude Opus 4.7)
+**バージョン**: v3.3.0 - TV 同等津波表示 + P2P ライブフィード版
+**実装言語**: JavaScript, HTML5, CSS3, Node.js, Python (pyshp + shapely)
+**セキュリティレベル**: エンタープライズグレード(XSS 対策・CSP 厳格化・メモリリーク対策・commit 匿名化)
+**品質保証**: 統一エラーハンドリング・データ検証強化・設定管理統一
+
+## v3.3 実装サマリー(2026-04-20)
+
+### データ基盤の刷新
+- 合成フェイク topojson (14 地域・対角線ストライプ) を **気象庁公式 shapefile から 70 地域 GeoJSON** に置換
+- 変換スクリプト `scripts/convert_jma_shapefile.py` (pyshp + shapely) 新規作成
+
+### フロント表示の TV 同等化
+- 警報レベル別カラー (紫 / 赤 / 黄) + 1 秒周期の同期点滅 + drop-shadow 発光
+- 画面下部に **TV 風テロップ**(45 秒右→左ループ、警報級は枠色脈動)
+- 右サイドバーが最高警報レベル / 発表時刻 / 優先度ソート / 波高を正しく反映
+
+### P2P 実データ連携
+- WebSocket code 552 を `handleEarthquakeData` で受信 → `applyP2PTsunamiMessage` に橋渡し
+- 起動時に `/v2/history?codes=552&limit=1` を取得し既発令警報を即反映
+- grade (MajorWarning/Warning/Watch) → 内部 STATUS に変換し地域名で lookup
+
+### 音声警報
+- `simulateTsunamiAlerts` および実データ受信時に最高レベルで自動発報
+- `clearTsunamiAlerts` と cancelled で自動停止
+
+### 運用改善
+- `start.sh` 起動スクリプト追加(`.gitignore` に登録、ローカル専用)
+- このリポジトリの git author を GitHub noreply に固定(`75552186+ben202012@users.noreply.github.com`)
+- 未 push の 3 コミットは匿名メールで作成済
 **ライセンス**: MIT License

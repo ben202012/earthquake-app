@@ -540,23 +540,42 @@ Jisin -App/
 - **data-validator.js**: データ検証（16KB）
 - **utils.js**: 共通ユーティリティ（15KB）
 
-### データ仕様
-- **ソース**: 気象庁公式Shapefile（津波予報区）
-- **最適化**: 89MB → 1.5MB（95%削減）
-- **フォーマット**: TopoJSON（地理的精度保持）
-- **地域数**: 14津波予報区
-- **プロパティ**: AREA_NAME, AREA_CODE, STATUS, WAVE_HEIGHT, ARRIVAL_TIME
+### データ仕様（v3.3 更新）
+- **ソース**: 気象庁公式 Shapefile（`20240520_AreaTsunami_GIS.zip`、93.5MB）
+- **変換**: `scripts/convert_jma_shapefile.py`(pyshp + shapely)で GeoJSON に変換、shapely.simplify(tol=0.002) で頂点 3% に削減
+- **フォーマット**: **GeoJSON**(`data/jma-tsunami-areas.geojson`、10.5MB)
+- **形状**: MultiLineString(沿岸ポリラインでTV風の「色帯」表示)
+- **地域数**: **70 地域**(全国カバー、離島・小笠原・南西諸島含む)
+- **プロパティ**: AREA_NAME, AREA_CODE, AREA_NAME_KANA, STATUS, WAVE_HEIGHT, ARRIVAL_TIME, ISSUED_AT
+- **STATUS 初期値**: `'none'`(平常時は描画されない。警報受信時のみ色付く)
 
-### 技術的制約と限界
-1. **表示品質**: Web技術の限界により直線近似表示
-2. **専門ソフトとの差**: NHK・KyoshinEewViewerの曲線表示に劣る
-3. **リアルタイム更新**: P2P地震情報に津波データが含まれないため手動更新
-4. **地理的精度**: TopoJSON簡略化による細部の欠落
+### 実データ連携（v3.3 新規）
+- **P2P 地震情報 WebSocket** の code 552(津波情報)を受信 → 地域名マッチングで GeoJSON を更新し再描画
+- 起動時に **`/v2/history?codes=552&limit=1`** を取得して既発令中の警報を即座に反映
+- `grade`(MajorWarning/Warning/Watch) → 内部 `STATUS`(major_warning/warning/advisory)に変換
+- 解除 (`cancelled: true`) で全地域を無色に戻し音声停止
+
+### 表示仕様（v3.3 刷新）
+- **警報レベル別カラー**: 🟣 紫(大津波警報 `#B14ABA`) / 🔴 赤(津波警報 `#FF2800`) / 🟡 黄(注意報 `#F2E700`)
+- **同期点滅アニメ**: 全レベル 1 秒周期、`opacity` + `drop-shadow` で発光、不透明度の振れ幅で緊急度を差別化
+- **下部テロップ**: 画面下に固定した横スクロール警報情報(45秒ループ、TV風)
+- **右サイドバー**: 最高警報レベルを見出しに反映、優先度順でソート、発表時刻を動的更新
+
+### コンソールヘルパー(DevTools)
+```js
+simulateTsunamiAlerts({
+  major_warning: ['100','101','201','210','220'],  // 大津波警報
+  warning:       ['230','250','300'],               // 津波警報
+  advisory:      ['310','320']                      // 注意報
+});
+clearTsunamiAlerts();                               // 全解除
+testTsunamiAudio('major_warning');                  // 音声単体テスト
+```
 
 ### パフォーマンス
-- **読み込み時間**: 平均50-100ms
-- **メモリ使用量**: +5-10MB
-- **キャッシュ**: LocalStorageによる高速再表示
+- **データ読み込み**: GeoJSON 10.5MB を fetch + parse で約 200〜500ms
+- **メモリ使用量**: 60〜80 MB(Leaflet + GeoJSON レイヤー含む)
+- **描画**: 70 features を `L.geoJSON()` で一括描画(初回のみ、再シミュレーション時は冪等に再構築)
 
 ---
 
@@ -581,14 +600,26 @@ Jisin -App/
 
 ---
 
-**最終更新**: 2024年12月19日  
-**実用機能**: **60%達成** (セキュリティ強化完了)  
-**バージョン**: 3.1.0 セキュリティ強化版津波監視システム  
-**対応環境**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+  
-**推奨環境**: Node.js専用サーバー (http://localhost:8080) [[memory:5505663]]  
-**アーキテクチャ**: セキュリティ強化 + 基本津波予測 + 多地点連携統合設計  
-**セキュリティ**: XSS対策・CSP厳格化・メモリリーク対策完備  
-**品質管理**: 統一エラーハンドリング・データ検証強化・設定管理統一  
-**津波実装**: 高精度予測エンジン + 緊急対応システム完備  
-**音声システム**: Web Audio API完全実装・外部依存性除去  
+**最終更新**: 2026年4月20日(v3.3 TV同等津波表示リリース)
+**実用機能**: **85%達成**(TV同等の津波リアルタイム表示 + P2P ライブ連携完了)
+**バージョン**: 3.3.0 TV同等津波監視システム
+**対応環境**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+**推奨環境**: Node.js 専用サーバー (http://localhost:8080)
+**起動方法**: `start.sh`(ローカル専用、.gitignore 済)または `source .venv/bin/activate && node server.js`
+**アーキテクチャ**: セキュリティ強化 + TV同等津波表示 + P2P ライブフィード + 多地点連携
+**セキュリティ**: XSS 対策 + CSP 厳格化 + メモリリーク対策 + commit 匿名化
+**品質管理**: 統一エラーハンドリング + データ検証強化 + 設定管理統一
+**津波実装**: 気象庁公式 70 地域 GeoJSON + P2P 552 リアルタイム連携 + 同期点滅アニメ + TV 風テロップ
+**音声システム**: Web Audio API 完全実装 + 警報レベル別自動発報
+
+## 🆕 v3.3(2026-04-20)の変更点
+
+- 🗺️ **津波予報区データを気象庁公式 70 地域 shapefile に置換**(旧 14 地域合成フェイクから刷新)
+- 🎨 **警報レベル別カラー + 同期点滅アニメ + 発光エフェクト**(TV 同等の視覚インパクト)
+- 📺 **下部 TV 風テロップ追加**(45秒ループ、警報時のみ表示、枠色脈動)
+- 📡 **P2P WebSocket code 552 受信 + REST 履歴取得**で実データのライブ反映
+- 🔊 警報音を最高レベルに応じて自動再生(解除で自動停止)
+- 🛠️ DevTools シミュレーション関数(`simulateTsunamiAlerts` / `clearTsunamiAlerts` / `testTsunamiAudio`)
+- 🧹 起動スクリプト `start.sh` 追加 + `.gitignore` に登録(個人情報配慮)
+- 🔐 このリポジトリの git author を noreply メールに固定(今後のコミット匿名化)
 **CORS対応**: Node.js専用プロキシサーバー完全実装

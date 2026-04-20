@@ -992,96 +992,118 @@ saveData() {
 
 **総合技術的完成度: 80%** (目標達成)
 
-## 14. 津波予報区実装技術仕様
+## 14. 津波予報区実装技術仕様(v3.3 全面刷新)
 
-### 14.1 JMA津波データシステム
+### 14.1 JMA 津波データシステム(気象庁公式 70 地域)
 
 #### 14.1.1 データフロー
 ```
-気象庁Shapefile (89MB) → GeoJSON変換 → TopoJSON最適化 (1.5MB) → ブラウザ表示
+気象庁 Shapefile (93.5MB)
+  └ 20240520_AreaTsunami_GIS.zip
+      └ 津波予報区.shp (POLYLINE, 70 areas, 約 890万頂点)
+scripts/convert_jma_shapefile.py
+  └ pyshp で読込 + shapely.simplify(tol=0.002度 ≒200m)
+GeoJSON (10.5MB, MultiLineString, 約 26万頂点, 70 地域)
+  └ data/jma-tsunami-areas.geojson
+ブラウザで fetch + L.geoJSON() 描画
 ```
 
 #### 14.1.2 ファイル構成
-- **jma-tsunami-loader.js**: 製品版TopoJSONローダー
-  - キャッシュ機能、エラーハンドリング、パフォーマンス監視
-  - フォールバックデータシステム
-- **jma-data-converter.js**: 開発用データ変換パイプライン
-  - Shapefile → GeoJSON → TopoJSON変換ワークフロー
-- **data/jma-tsunami-areas.topojson**: 14津波予報区データ (23KB)
+- **jma-tsunami-loader.js**: GeoJSON ローダー(topojson 依存を除去済)
+  - フェッチ + 検証 + LocalStorage キャッシュ
+  - `isStatusCleared('none')` で平常時は非描画扱い
+  - `getActiveAreas()` で警報中の地域のみを返す
+- **scripts/convert_jma_shapefile.py**: 気象庁 shapefile → GeoJSON 変換
+  - pyshp + shapely、tolerance と出力先は CLI 引数で調整可
+- **scripts/convert_tsunami_topojson.py**: 旧 topojson(合成フェイク)調査スクリプト(履歴用)
+- **data/jma-tsunami-areas.geojson**: 70 予報区 MultiLineString (約 10.5 MB)
+- **data/jma-tsunami-areas.topojson**: 旧 14 地域合成プレースホルダー(未使用、残存)
 
-#### 14.1.3 技術的制限
+#### 14.1.3 パフォーマンス指標(実測)
 ```javascript
-// 技術的限界
-const limitations = {
-    displayQuality: 'ストレートライン近似（曲線表示不可）',
-    dataSource: '静的TopoJSONファイル（リアルタイム更新なし）',
-    visualComparison: 'NHK/KyoshinEewViewerの品質に劣る',
-    webTechLimit: 'Web技術による地理的精度の制約'
-};
-```
-
-#### 14.1.4 パフォーマンス仕様
-```javascript
-// パフォーマンス指標
 const performance = {
-    fileSize: '23KB (95%削減)', 
-    loadTime: '50-100ms平均',
-    memoryUsage: '+5-10MB',
-    cacheStrategy: 'LocalStorage + メモリキャッシュ',
-    errorHandling: 'フォールバック + 自動復旧'
+    fileSize:     '10.5 MB (859 万頂点 → 26 万頂点、約 3% に圧縮)',
+    loadTime:     '200〜500ms(ネットワーク次第)',
+    memoryUsage:  '60〜80 MB (Leaflet + SVG path 70本 + GeoJSON cache)',
+    cacheStrategy:'loader.cache(メモリ)のみ',
+    errorHandling:'getFallbackData() に切替、cache にも保存して再呼出を防ぐ'
 };
 ```
 
-#### 14.1.5 JMA公式データ構造
+#### 14.1.4 GeoJSON プロパティ仕様
 ```javascript
-// TopoJSON プロパティ仕様
 const jmaProperties = {
-    AREA_NAME: '北海道太平洋沿岸東部',    // 予報区名
-    AREA_CODE: '191',                    // 気象庁地域コード
-    STATUS: 'advisory',                  // 警報レベル
-    WAVE_HEIGHT: '1m',                   // 予想津波高
-    ARRIVAL_TIME: '既に到達と推定'        // 到達予想時刻
+    AREA_CODE:     '100',                 // 気象庁地域コード(3桁文字列)
+    AREA_NAME:     '北海道太平洋沿岸東部', // 予報区名
+    AREA_NAME_KANA:'ほっかいどうたいへいようえんがんとうぶ',
+    STATUS:        'none',                // 'none'|'advisory'|'warning'|'major_warning'|'cleared'|'cancelled'|'lifted'
+    WAVE_HEIGHT:   '',                    // 例: '1m', '3m', '10m超'
+    ARRIVAL_TIME:  '',                    // 例: '既に到達と推定', '直ちに避難'
+    ISSUED_AT:     ''                     // ISO8601。P2P の issue.time 由来
 };
 ```
 
-### 14.2 実装されたアルゴリズム
+### 14.2 P2P 実データ連携(v3.3 新規)
 
-#### 14.2.1 データ最適化
-```javascript
-class JMADataConverter {
-    // 89MB → 1.5MB変換プロセス
-    optimize(shapefileData) {
-        return topojson.topology({
-            tsunami_areas: geoJsonData
-        }, {
-            quantization: 10000,  // 座標精度
-            'simplify-ratio': 0.1  // 形状簡略化
-        });
-    }
-}
-```
+#### 14.2.1 受信経路
+- **WebSocket** (`wss://api.p2pquake.net/v2/ws`): 新着 552 を即座に反映
+- **REST** (`GET /v2/history?codes=552&limit=1`): 起動時に現在発令中の1件を初期化
 
-#### 14.2.2 表示制御
+#### 14.2.2 grade → STATUS マッピング
 ```javascript
-// 津波警報レベル別色分け
-const TSUNAMI_COLORS = {
-    advisory: '#FFD700',      // 津波注意報: 黄色
-    warning: '#FF8C00',       // 津波警報: オレンジ
-    major_warning: '#FF4500'  // 大津波警報: 赤
+const GRADE_TO_STATUS = {
+    MajorWarning: 'major_warning',  // 紫 #B14ABA
+    Warning:      'warning',        // 赤 #FF2800
+    Watch:        'advisory',       // 黄 #F2E700
+    Unknown:      'advisory'
 };
 ```
 
-### 14.3 制限事項と今後の課題
+#### 14.2.3 applyP2PTsunamiMessage の責務
+1. `tsunamiLoader.cache.features` を全件 `STATUS='none'` に初期化
+2. `data.cancelled` または `areas` 空なら解除処理(音声停止 + 再描画)
+3. 各 `area.name` を `AREA_NAME` で lookup して STATUS / WAVE_HEIGHT / ARRIVAL_TIME / ISSUED_AT を更新
+4. マッチング失敗地域は `console.warn` で記録
+5. `addTsunamiCoastlines()` で冪等に再描画
+6. 最高レベルで `audioAlertSystem.playAlert()` を発報
 
-#### 14.3.1 技術的制限
-1. **表示品質**: 直線近似による沿岸曲線の精度不足
-2. **リアルタイム性**: P2P地震情報に津波データが含まれない
-3. **専門ソフトとの格差**: デスクトップアプリケーションに劣る視覚品質
+### 14.3 表示制御(v3.3)
 
-#### 14.3.2 Web技術の限界
-- ブラウザレンダリング性能による制約
-- JavaScriptでの地理データ処理限界
-- TopoJSON簡略化による詳細の欠落
+#### 14.3.1 警報レベル別カラー
+```javascript
+const TSUNAMI_STATUS_COLORS = {
+    major_warning: '#B14ABA',  // 大津波警報: 紫(JMA/NHK 準拠)
+    warning:       '#FF2800',  // 津波警報: 赤
+    advisory:      '#F2E700',  // 津波注意報: 黄
+    forecast:      '#90EE90',  // 津波予報: 緑
+    cleared:       '#808080',  // 解除: 灰
+    cancelled:     '#808080',
+    lifted:        '#808080'
+};
+```
+
+#### 14.3.2 同期点滅アニメ
+- 全レベル 1 秒周期の `alternate infinite`
+- `opacity` と `filter: drop-shadow(...)` で緊急度を差別化
+- `stroke-opacity !important` との衝突を避けるため要素全体 `opacity` を使用
+  - major_warning: 0.25 → 1.0、shadow 1→8 px
+  - warning:       0.15 → 1.0、shadow 1→5 px
+  - advisory:      0.20 → 1.0、shadow 0→3 px
+
+#### 14.3.3 TV 風テロップ
+- 固定 `position: fixed; bottom: 0`、高さ 46px
+- 左: 最高レベルラベル / 発表時刻 / トラック(右→左 45 秒ループ)
+- 警報級は `ticker-pulse-border` アニメで枠色発光
+- XSS 対策のため `createElement` で構築(innerHTML 禁止)
+
+### 14.4 以前の「制限事項」の解消状況
+
+| v3.2 までの制限 | v3.3 での状態 |
+|---|---|
+| 表示品質(直線近似) | ✅ 解決。実海岸線を shapely.simplify で 200m 精度保持 |
+| リアルタイム性(P2P に津波なし) | ✅ 解決。P2P は code 552 で津波情報を配信しており WebSocket + REST で反映 |
+| 専門ソフトとの格差 | △ 部分解決。予報区ポリラインは KyoshinEewViewer 同等、DEM / 観測値は未実装 |
+| 14 地域のみ(合成フェイク) | ✅ 解決。気象庁公式 70 地域に置換 |
 
 ---
 
@@ -1138,12 +1160,12 @@ class Utils {
 
 ---
 
-**最終更新**: 2024年12月19日  
-**完成度**: **60%達成** (セキュリティ強化完了)  
-**バージョン**: 3.1.0 セキュリティ強化版津波監視システム  
-**アーキテクチャ**: セキュリティ強化 + Professional Component-based Design  
-**技術仕様**: エンタープライズレベル実装完了 + セキュリティ対策完備  
-**セキュリティ**: XSS対策・CSP厳格化・メモリリーク対策・統一エラーハンドリング  
-**津波実装**: 高精度予測エンジン + 緊急対応システム完備  
-**音声システム**: Web Audio API完全実装・外部依存性除去  
-**CORS対応**: セキュアプロキシサーバー完全実装
+**最終更新**: 2026年4月20日(v3.3 TV 同等津波表示リリース)
+**完成度**: **85%達成**(TV 同等表示 + P2P ライブ連携 完了)
+**バージョン**: 3.3.0 TV 同等津波監視システム
+**アーキテクチャ**: セキュリティ強化 + TV 同等津波表示 + P2P ライブフィード
+**技術仕様**: 気象庁公式 70 地域 GeoJSON + 同期点滅アニメ + TV 風テロップ + WebSocket/REST 両経路
+**セキュリティ**: XSS 対策・CSP 厳格化・メモリリーク対策・統一エラーハンドリング
+**津波実装**: 実海岸線ポリライン + レベル別カラー + 発光アニメ + 実データ自動反映
+**音声システム**: Web Audio API + 警報レベル別自動発報
+**CORS 対応**: セキュアプロキシサーバー完全実装
