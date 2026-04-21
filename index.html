@@ -353,6 +353,11 @@
             display: none;
         }
 
+        /* コンパクト時は津波凡例を隠す（狭い領域を圧迫するため・右パネルに同情報あり） */
+        .main-content:not(.map-expanded) .jma-tsunami-legend {
+            display: none;
+        }
+
         #earthquake-map {
             width: 100%;
             height: 100%;
@@ -1899,6 +1904,9 @@
                 
                 // 夜間モード状態
                 this.nightModeEnabled = false;
+
+                // アクティブな津波地域（compact時のフィット計算で使用）
+                this.activeTsunamiAreas = [];
                 
                 // 実用津波情報システム (50%完成度版)
                 this.tsunamiManager = new TsunamiManager();
@@ -2133,7 +2141,8 @@
                         // コンパクトに戻すときは日本全体に再フィット（見切れ防止）
                         // 拡大時も直前が低ズーム（コンパクト由来）の場合は日本全体に再フィット
                         if (!expanded || this.map.getZoom() < 5) {
-                            this.map.fitBounds(this.japanBounds, { padding: [10, 10], animate: false });
+                            const bounds = this.computeEffectiveFitBounds();
+                            this.map.fitBounds(bounds, { padding: [10, 10], animate: false });
                         }
                     }, 320);
                 };
@@ -2149,6 +2158,39 @@
                         this.setMapExpanded(true);
                     }
                 });
+            }
+
+            // 日本列島 + アクティブな津波地域を両方収める bounds を返す
+            computeEffectiveFitBounds() {
+                if (!this.japanBounds) return null;
+                const base = L.latLngBounds(
+                    this.japanBounds.getSouthWest(),
+                    this.japanBounds.getNorthEast()
+                );
+                const areas = this.activeTsunamiAreas;
+                if (!areas || areas.length === 0) return base;
+                areas.forEach(feature => {
+                    try {
+                        const fb = L.geoJSON(feature).getBounds();
+                        if (fb && fb.isValid()) base.extend(fb);
+                    } catch (e) {
+                        // 不正な geometry は無視
+                    }
+                });
+                return base;
+            }
+
+            // 津波状態変化時、現在のモード（compact/expanded）を保ったまま再フィット
+            refitForTsunami() {
+                if (!this.map) return;
+                const main = document.getElementById('main-content');
+                const isExpanded = main?.classList.contains('map-expanded');
+                // 拡大時にユーザが手動でズームイン（>=5）している場合は現在の視点を尊重
+                if (isExpanded && this.map.getZoom() >= 5) return;
+                const bounds = this.computeEffectiveFitBounds();
+                if (bounds && bounds.isValid()) {
+                    this.map.fitBounds(bounds, { padding: [10, 10], animate: true });
+                }
             }
 
             addJapanOverlay() {
@@ -6834,14 +6876,36 @@
         }
 
         // グローバル関数
+        let _prevTsunamiActive = false;
         function updateTsunamiDisplay(activeAreas) {
             const tsunamiPanel = document.querySelector('.tsunami-warning-panel');
             const tsunamiSectionTitle = document.getElementById('tsunami-section-title');
 
-            // 津波発生時は地図を自動拡大（地理情報が重要になるため）
-            if (activeAreas.length > 0 && window.monitor?.setMapExpanded) {
+            const isActive = activeAreas.length > 0;
+
+            // アクティブな津波地域情報を monitor に共有（フィット計算で利用）
+            if (window.monitor) {
+                window.monitor.activeTsunamiAreas = isActive ? activeAreas : [];
+            }
+
+            // エッジトリガー: 非活性→活性の遷移時のみ自動拡大
+            // （活性中の地域追加などで勝手に再拡大させない）
+            if (isActive && !_prevTsunamiActive && window.monitor?.setMapExpanded) {
                 window.monitor.setMapExpanded(true);
             }
+
+            // 活性状態で地域内容が変わった場合は compact 時のみ再フィット
+            // （沖縄を含む新地域が追加されたら compact bounds を拡張）
+            if (isActive && _prevTsunamiActive && window.monitor?.refitForTsunami) {
+                window.monitor.refitForTsunami();
+            }
+
+            // 非活性へ戻った場合は japanBounds に戻す
+            if (!isActive && _prevTsunamiActive && window.monitor?.refitForTsunami) {
+                window.monitor.refitForTsunami();
+            }
+
+            _prevTsunamiActive = isActive;
             
             // 警報レベル別の見出し・優先度定義
             const LEVEL_META = {
