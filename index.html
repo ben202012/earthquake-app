@@ -2041,24 +2041,17 @@
 
             // 夜間モード切り替え機能のセットアップ
             setupNightModeToggle() {
-                // 現在の時刻を取得
-                const now = new Date();
-                const hour = now.getHours();
-                
-                // 夜間時間帯を判定（18時〜6時）
-                const isNightTime = hour >= 18 || hour < 6;
-                
-                // 夜間時間帯の場合、自動的に暗めにする
-                if (isNightTime) {
-                    this.enableNightMode(true); // 自動適用
-                } else {
-                    this.enableNightMode(false);
-                }
-                
-                // ヘッダーに夜間モード切り替えボタンを追加
+                // 先にボタンを作成（enableNightMode がラベルを同期できるように）
                 this.addNightModeToggleButton();
-                
-                console.log(`🌗 夜間モード設定: ${isNightTime ? '自動適用中' : '標準表示'} (${hour}時)`);
+
+                // 自動時刻判定は廃止し、localStorage から手動設定を復元
+                const saved = (typeof Storage !== 'undefined')
+                    ? localStorage.getItem('nightModeEnabled')
+                    : null;
+                const enabled = saved === 'true';
+                this.enableNightMode(enabled);
+
+                console.log(`🌗 夜間モード設定（手動・復元）: ${enabled ? 'ON' : 'OFF'}`);
             }
             
             // 夜間モード切り替えボタンの追加
@@ -2088,23 +2081,27 @@
             // 夜間モードの有効/無効化（明度調整機能に統合）
             enableNightMode(enabled) {
                 const nightModeBtn = document.getElementById('night-mode-toggle');
-                
+
                 if (enabled) {
-                    // 明度調整機能を使って70%に設定（夜間モード）
-                    this.updateMapBrightness(70);
+                    // 50% に下げて視認性を確保（旧 70% は変化が分かりにくかった）
+                    this.updateMapBrightness(50);
                     if (nightModeBtn) {
                         nightModeBtn.textContent = '☀️ 標準表示';
                         nightModeBtn.title = '明るい表示に戻す';
                     }
                     this.nightModeEnabled = true;
                 } else {
-                    // 明度調整機能を使って100%に設定（標準表示）
                     this.updateMapBrightness(100);
                     if (nightModeBtn) {
                         nightModeBtn.textContent = '🌙 夜間モード';
                         nightModeBtn.title = '地図を暗めに調整';
                     }
                     this.nightModeEnabled = false;
+                }
+
+                // 状態を localStorage に永続化（次回起動時に復元）
+                if (typeof Storage !== 'undefined') {
+                    localStorage.setItem('nightModeEnabled', String(this.nightModeEnabled));
                 }
             }
             
