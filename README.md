@@ -656,3 +656,15 @@ testTsunamiAudio('major_warning');                  // 音声単体テスト
 - ⏱️ **「応答時間」を実測化**: `performance.now()` で P2P API fetch ラウンドトリップを計測(従来は常に 0ms の飾り)
 - 📉 README から **未実測の虚偽メトリック削除**: 「稼働率 98.5%(24時間連続稼働確認済み)」「平均応答時間 250ms」「CPU 1-3%」「ネットワーク 1-5KB/分」等。実測値(GeoJSON ロード 200-500ms、メモリ 60-80MB)のみ残存
 - 📋 **緊急対応機能の完成度を 70% → 50% に下方修正**: `getRouteDestination()` が現在地 +0.01° を返すだけのダミー実装であることを明記、避難所データ未統合を制限事項に追記
+
+### 夜間モード修正
+- 🐛 **夜間モードボタンの動作不具合を修正**:
+  - 原因 1: `addNightModeToggleButton()` より先に `enableNightMode()` を呼んでいたためラベルと内部状態が常にズレていた
+  - 原因 2: `index.html` と `main.js` の両方に click ハンドラが二重バインドされ、1 クリックで toggle が 2 回実行され元に戻っていた(`main.js` 側を削除)
+  - 原因 3: 旧実装は `.leaflet-container` のみに `filter:brightness(0.7)` を適用しており変化が分かりにくかった → `body.night-mode` クラスで **画面全体に `brightness(0.55) contrast(1.05)`** を適用
+- 🌙 18-6 時の **時刻ベース自動切り替えを廃止**(リロードのたびに勝手に夜間 ON になっていた)
+- 💾 状態を `localStorage('nightModeEnabled')` に永続化して次回起動時に復元
+
+### CSP・セキュリティ設定
+- 🔒 **CSP `connect-src` に CDN ホスト追加**(`unpkg.com` / `cdn.jsdelivr.net` / `cdnjs.cloudflare.com`): DevTools 利用時に Leaflet などの source map 取得が CSP でブロックされる警告を解消
+- 📦 **`security-config.js` をリポジトリ管理対象に変更**(`.gitignore` から除外): CSP/CORS/レート制限などの公開ヘッダ設定のみで秘密情報を含まず、リポジトリに含めないと clone 直後に `node server.js` が起動できないため
