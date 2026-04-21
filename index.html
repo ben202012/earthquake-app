@@ -220,88 +220,103 @@
         /* 統計情報 */
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
         }
-        
+
         .stat-card {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 6px;
+            padding: 8px 4px;
             text-align: center;
         }
-        
+
         .stat-value {
-            font-size: 20px;
+            font-size: 15px;
             font-weight: 700;
             color: #4a9eff;
             font-family: 'SF Mono', monospace;
+            line-height: 1.2;
         }
-        
+
         .stat-label {
-            font-size: 12px;
+            font-size: 10px;
             color: #94a3b8;
-            margin-top: 4px;
+            margin-top: 2px;
+            line-height: 1.2;
         }
         
-        /* 最新地震リスト */
+        /* 最新地震リスト（テーブル行レイアウト） */
         .earthquake-list {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 12px 12px 8px;
         }
-        
+
         .earthquake-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background 0.15s ease;
         }
-        
+
         .earthquake-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(4px);
+            background: rgba(255, 255, 255, 0.06);
         }
-        
+
+        .earthquake-item:last-child {
+            border-bottom: none;
+        }
+
         .earthquake-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
+            gap: 4px;
+            flex-shrink: 0;
         }
-        
+
         .magnitude {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 11px;
             font-weight: 600;
+            min-width: 44px;
+            text-align: center;
+            font-family: 'SF Mono', monospace;
         }
-        
+
         .intensity {
             background: linear-gradient(135deg, #4a9eff 0%, #667eea 100%);
             color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 11px;
             font-weight: 600;
+            min-width: 52px;
+            text-align: center;
         }
-        
+
         .earthquake-location {
-            font-size: 14px;
+            flex: 1;
+            font-size: 13px;
             font-weight: 500;
             color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
         }
-        
+
         .earthquake-time {
-            font-size: 12px;
+            font-size: 11px;
             color: #94a3b8;
             font-family: 'SF Mono', monospace;
+            flex-shrink: 0;
         }
         
         /* === メイン地図エリア === */
@@ -310,18 +325,145 @@
             background: #0f1419;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        
+
         .map-container {
             width: 100%;
-            height: 100%;
+            height: 280px;
             position: relative;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: height 0.3s ease;
         }
-        
+
+        .main-content.map-expanded .map-container {
+            flex: 1;
+            height: auto;
+            cursor: default;
+        }
+
+        .main-content.map-expanded .info-dashboard {
+            display: none;
+        }
+
+        /* コンパクト時は地図右下の情報オーバーレイを隠す（サイドバー/ダッシュボードに情報あり） */
+        .main-content:not(.map-expanded) .map-overlay {
+            display: none;
+        }
+
         #earthquake-map {
             width: 100%;
             height: 100%;
             background: #0f1419;
+        }
+
+        .map-toggle-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 1000;
+            background: rgba(26, 35, 50, 0.92);
+            color: #ffffff;
+            border: 1px solid rgba(74, 158, 255, 0.4);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .map-toggle-btn:hover {
+            background: rgba(74, 158, 255, 0.3);
+            border-color: rgba(74, 158, 255, 0.7);
+        }
+
+        /* === 情報ダッシュボード（地図下部） === */
+        .info-dashboard {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+            background: linear-gradient(180deg, #0c1623 0%, #1a2332 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-dashboard-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a9eff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chart-period {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 400;
+            margin-left: auto;
+        }
+
+        .frequency-chart {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .chart-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 22px;
+            margin-bottom: 3px;
+        }
+
+        .chart-row:last-child { margin-bottom: 0; }
+
+        .chart-row-label {
+            width: 46px;
+            font-size: 11px;
+            color: #e2e8f0;
+            font-weight: 600;
+            flex-shrink: 0;
+            text-align: right;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-row-track {
+            flex: 1;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .chart-row-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+            min-width: 2px;
+        }
+
+        .chart-row-count {
+            width: 28px;
+            font-size: 11px;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: right;
+            flex-shrink: 0;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-empty {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            padding: 16px 8px;
         }
         
         .map-overlay {
@@ -348,26 +490,31 @@
         
         .coordinate-info {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
         }
-        
+
         .coord-item {
             text-align: center;
+            padding: 6px 2px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
         }
-        
+
         .coord-label {
-            font-size: 12px;
+            font-size: 10px;
             color: #a0aec0;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
+            line-height: 1.2;
         }
-        
+
         .coord-value {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #f7fafc;
             font-family: 'SF Mono', monospace;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            line-height: 1.2;
         }
         
         /* === 右パネル === */
@@ -412,12 +559,12 @@
         
         .monitoring-panel {
             flex: 1;
-            padding: 20px;
+            padding: 14px;
             overflow-y: auto;
         }
-        
+
         .monitoring-section {
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
         
         .monitoring-title {
@@ -603,31 +750,33 @@
         
         .metrics-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
         }
-        
+
         .metric-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 6px;
+            padding: 8px 4px;
             text-align: center;
         }
-        
+
         .metric-value {
-            font-size: 18px;
+            font-size: 13px;
             font-weight: 700;
             color: #ffffff;
             font-family: 'SF Mono', monospace;
+            line-height: 1.2;
         }
-        
+
         .metric-label {
-            font-size: 11px;
+            font-size: 9px;
             color: #94a3b8;
-            margin-top: 4px;
+            margin-top: 2px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
+            line-height: 1.2;
         }
         
         .activity-feed {
@@ -639,11 +788,11 @@
         }
         
         .feed-item {
-            padding: 12px;
+            padding: 6px 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
         
         .feed-item:last-child {
@@ -651,23 +800,35 @@
         }
         
         .feed-icon {
-            font-size: 16px;
+            font-size: 14px;
+            flex-shrink: 0;
         }
-        
+
         .feed-content {
             flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0;
         }
-        
+
         .feed-text {
-            font-size: 13px;
+            font-size: 12px;
             color: #ffffff;
-            line-height: 1.4;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
         }
-        
+
         .feed-time {
-            font-size: 11px;
+            font-size: 10px;
             color: #94a3b8;
             font-family: 'SF Mono', monospace;
+            flex-shrink: 0;
         }
         
         /* 震源位置情報パネル */
@@ -1575,9 +1736,19 @@
         </aside>
         
         <!-- メイン地図エリア -->
-        <main class="main-content">
-            <div class="map-container">
+        <main class="main-content" id="main-content">
+            <div class="map-container" id="map-container">
                 <div id="earthquake-map"></div>
+                <button class="map-toggle-btn" id="map-toggle-btn" type="button" aria-label="地図を拡大">⛶ 拡大</button>
+            </div>
+            <div class="info-dashboard" id="info-dashboard">
+                <div class="info-dashboard-title">
+                    📊 震度別発生回数
+                    <span class="chart-period">過去24時間</span>
+                </div>
+                <div class="frequency-chart" id="frequency-chart">
+                    <div class="chart-empty">データを読み込み中...</div>
+                </div>
             </div>
         </main>
         
@@ -1658,6 +1829,12 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- アクティビティフィード -->
+                <div class="monitoring-section">
+                    <div class="monitoring-title">📡 アクティビティ</div>
+                    <div class="activity-feed" id="activity-feed"></div>
                 </div>
             </div>
         </aside>
@@ -1850,6 +2027,7 @@
                 this.map = L.map('earthquake-map', {
                     center: [36.2, 138.2],
                     zoom: 5,
+                    minZoom: 3,
                     zoomControl: true,
                     attributionControl: false
                 });
@@ -1859,31 +2037,35 @@
                     '標準マップ': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '© OpenStreetMap contributors',
                         maxZoom: 18,
-                        minZoom: 4,
+                        minZoom: 3,
                         className: 'standard-map-layer'
                     }),
                     'ダーク（控えめ）': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
                         maxZoom: 18,
-                        minZoom: 4,
+                        minZoom: 3,
                         className: 'dark-subtle'
                     }),
                     'グレー（中間調）': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
                         maxZoom: 18,
-                        minZoom: 4,
+                        minZoom: 3,
                         opacity: 0.8
                     }),
                     'ライト（明るめ）': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
                         attribution: '© CARTO',
                         maxZoom: 18,
-                        minZoom: 4
+                        minZoom: 3
                     })
                 };
 
                 // デフォルトレイヤー（標準マップ）を設定
                 const defaultLayer = mapLayers['標準マップ'];
                 defaultLayer.addTo(this.map);
+
+                // 日本本土を収める矩形（九州南端〜北海道北端、沖縄は含めず拡大率を稼ぐ）
+                this.japanBounds = L.latLngBounds([[30.0, 128.0], [46.0, 146.5]]);
+                this.map.fitBounds(this.japanBounds, { padding: [10, 10] });
 
                 // 地図レイヤーを保存（設定パネルで使用）
                 this.mapLayers = mapLayers;
@@ -1923,11 +2105,50 @@
                 
                 // 地図移動イベントを検知
                 this.setupMapEventListeners();
-                
+
+                // 地図拡大/縮小トグル
+                this.setupMapToggle();
+
                 // 明度設定を初期化・適用
                 this.initializeBrightnessSettings();
 
                 console.log('🗺️ Map initialized with enhanced visibility for Japan');
+            }
+
+            setupMapToggle() {
+                const main = document.getElementById('main-content');
+                const btn = document.getElementById('map-toggle-btn');
+                if (!main || !btn) return;
+
+                this.setMapExpanded = (expanded) => {
+                    const alreadyExpanded = main.classList.contains('map-expanded');
+                    if (expanded === alreadyExpanded) return;
+                    main.classList.toggle('map-expanded', expanded);
+                    btn.textContent = expanded ? '⛶ 縮小' : '⛶ 拡大';
+                    btn.setAttribute('aria-label', expanded ? '地図を縮小' : '地図を拡大');
+                    setTimeout(() => {
+                        if (!this.map) return;
+                        this.map.invalidateSize();
+                        if (!this.japanBounds) return;
+                        // コンパクトに戻すときは日本全体に再フィット（見切れ防止）
+                        // 拡大時も直前が低ズーム（コンパクト由来）の場合は日本全体に再フィット
+                        if (!expanded || this.map.getZoom() < 5) {
+                            this.map.fitBounds(this.japanBounds, { padding: [10, 10], animate: false });
+                        }
+                    }, 320);
+                };
+
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.setMapExpanded(!main.classList.contains('map-expanded'));
+                });
+
+                // コンパクト時に地図本体をクリックすると拡大（マーカークリックとは別イベント）
+                this.map.on('click', () => {
+                    if (!main.classList.contains('map-expanded')) {
+                        this.setMapExpanded(true);
+                    }
+                });
             }
 
             addJapanOverlay() {
@@ -3328,8 +3549,77 @@
                     itemDiv.appendChild(headerDiv);
                     itemDiv.appendChild(locationDiv);
                     itemDiv.appendChild(timeDiv);
-                    
+
                     container.appendChild(itemDiv);
+                });
+
+                this.renderFrequencyChart();
+            }
+
+            renderFrequencyChart() {
+                const container = document.getElementById('frequency-chart');
+                if (!container) return;
+
+                const buckets = ['1', '2', '3', '4', '5弱', '5強', '6弱', '6強', '7'];
+                const colors = {
+                    '1': '#9ca3af',
+                    '2': '#60a5fa',
+                    '3': '#3b82f6',
+                    '4': '#facc15',
+                    '5弱': '#fb923c',
+                    '5強': '#f97316',
+                    '6弱': '#ef4444',
+                    '6強': '#b91c1c',
+                    '7': '#7f1d1d'
+                };
+
+                const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+                const counts = Object.fromEntries(buckets.map(b => [b, 0]));
+
+                (this.earthquakeHistory || []).forEach(eq => {
+                    const t = eq.time instanceof Date ? eq.time.getTime() : new Date(eq.time).getTime();
+                    if (!t || t < cutoff) return;
+                    const key = String(eq.maxIntensity ?? '').trim();
+                    if (key in counts) counts[key]++;
+                });
+
+                const total = Object.values(counts).reduce((a, b) => a + b, 0);
+                container.textContent = '';
+
+                if (total === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'chart-empty';
+                    empty.textContent = '過去24時間に該当する地震データなし';
+                    container.appendChild(empty);
+                    return;
+                }
+
+                const max = Math.max(...Object.values(counts));
+                buckets.forEach(key => {
+                    const count = counts[key];
+                    const row = document.createElement('div');
+                    row.className = 'chart-row';
+
+                    const label = document.createElement('div');
+                    label.className = 'chart-row-label';
+                    label.textContent = `震度${key}`;
+
+                    const track = document.createElement('div');
+                    track.className = 'chart-row-track';
+                    const fill = document.createElement('div');
+                    fill.className = 'chart-row-fill';
+                    fill.style.width = max > 0 ? `${(count / max) * 100}%` : '0%';
+                    fill.style.background = colors[key];
+                    track.appendChild(fill);
+
+                    const countEl = document.createElement('div');
+                    countEl.className = 'chart-row-count';
+                    countEl.textContent = count;
+
+                    row.appendChild(label);
+                    row.appendChild(track);
+                    row.appendChild(countEl);
+                    container.appendChild(row);
                 });
             }
 
@@ -3499,6 +3789,12 @@
                 const settingsFeed = document.getElementById('settings-activity-feed');
                 if (settingsFeed) {
                     this.updateActivityFeedDisplay(settingsFeed);
+                }
+
+                // 右パネルのアクティビティフィードを更新
+                const mainFeed = document.getElementById('activity-feed');
+                if (mainFeed) {
+                    this.updateActivityFeedDisplay(mainFeed);
                 }
             }
             
@@ -6541,6 +6837,11 @@
         function updateTsunamiDisplay(activeAreas) {
             const tsunamiPanel = document.querySelector('.tsunami-warning-panel');
             const tsunamiSectionTitle = document.getElementById('tsunami-section-title');
+
+            // 津波発生時は地図を自動拡大（地理情報が重要になるため）
+            if (activeAreas.length > 0 && window.monitor?.setMapExpanded) {
+                window.monitor.setMapExpanded(true);
+            }
             
             // 警報レベル別の見出し・優先度定義
             const LEVEL_META = {
