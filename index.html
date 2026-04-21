@@ -264,23 +264,145 @@
             font-size: 18px;
         }
         
-        /* EEW ステータス */
-        .eew-status {
-            background: rgba(255, 107, 107, 0.1);
-            border: 1px solid rgba(255, 107, 107, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
+        /* === EEW パネル === */
+        .eew-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        
-        .eew-icon {
-            font-size: 24px;
+
+        /* 平常時: 1行のコンパクト待機表示 */
+        .eew-compact {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .eew-mini-icon { font-size: 14px; opacity: 0.7; }
+        .eew-mini-text { flex: 1; }
+        .eew-mini-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+            animation: eew-idle-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes eew-idle-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* 発報中: compact 行は「続報待機中」＋赤ドットに変化 */
+        .eew-panel.eew-active .eew-compact {
+            border-color: rgba(255, 42, 42, 0.4);
+            background: rgba(255, 42, 42, 0.08);
+            color: #fca5a5;
+        }
+
+        .eew-panel.eew-active .eew-mini-dot {
+            background: #ff2a2a;
+            box-shadow: 0 0 8px rgba(255, 42, 42, 0.7);
+            animation: eew-active-pulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes eew-active-pulse {
+            0%, 100% { opacity: 0.55; }
+            50%     { opacity: 1; }
+        }
+
+        /* hidden 属性が display:flex に上書きされないよう保険 */
+        [hidden] { display: none !important; }
+
+        /* 発信時: 展開されたアラート */
+        .eew-alert {
+            padding: 12px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(255, 42, 42, 0.22) 0%, rgba(255, 107, 107, 0.14) 100%);
+            border: 2px solid #ff2a2a;
+            animation: eew-alert-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes eew-alert-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 42, 42, 0.6); }
+            50%     { box-shadow: 0 0 14px 4px rgba(255, 42, 42, 0.5); }
+        }
+
+        .eew-alert-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 8px;
         }
-        
-        .eew-text {
-            font-size: 14px;
-            color: #ff9ff3;
+
+        .eew-badge {
+            background: #ff2a2a;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .eew-serial {
+            font-size: 11px;
+            color: #fca5a5;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .eew-epicenter {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .eew-alert-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .eew-stat {
+            text-align: center;
+            padding: 6px 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+
+        .eew-stat-label {
+            font-size: 10px;
+            color: #fca5a5;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .eew-stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'SF Mono', monospace;
+            line-height: 1.2;
+        }
+
+        .eew-alert-footer {
+            font-size: 10px;
+            color: #fca5a5;
+            text-align: center;
+            font-family: 'SF Mono', monospace;
         }
         
         /* 統計情報 */
@@ -1759,9 +1881,34 @@
                     <span class="section-icon">⚡</span>
                     緊急地震速報
                 </div>
-                <div class="eew-status">
-                    <div class="eew-icon">📡</div>
-                    <div class="eew-text" id="eew-status">発信なし</div>
+                <div class="eew-panel" id="eew-panel">
+                    <!-- 平常時: コンパクト待機表示 -->
+                    <div class="eew-compact" id="eew-compact">
+                        <span class="eew-mini-icon">📡</span>
+                        <span class="eew-mini-text">待機中</span>
+                        <span class="eew-mini-dot" aria-hidden="true"></span>
+                    </div>
+                    <!-- 発信時: 展開されたアラート -->
+                    <div class="eew-alert" id="eew-alert" hidden>
+                        <div class="eew-alert-header">
+                            <span class="eew-badge">⚡ 緊急地震速報</span>
+                            <span class="eew-serial" id="eew-serial">第1報</span>
+                        </div>
+                        <div class="eew-epicenter" id="eew-epicenter">震源: --</div>
+                        <div class="eew-alert-stats">
+                            <div class="eew-stat">
+                                <div class="eew-stat-label">予測最大震度</div>
+                                <div class="eew-stat-value" id="eew-max-intensity">--</div>
+                            </div>
+                            <div class="eew-stat">
+                                <div class="eew-stat-label">マグニチュード</div>
+                                <div class="eew-stat-value" id="eew-magnitude">M--</div>
+                            </div>
+                        </div>
+                        <div class="eew-alert-footer">
+                            <span id="eew-time">発表: --:--:--</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -3436,7 +3583,109 @@
                     console.log(`🌏 Earthquake detected: ${earthquake.location} M${earthquake.magnitude}`);
                 } else if (data.code === 552) { // 津波情報
                     this.handleTsunamiMessage(data);
+                } else if (data.code === 556) { // 緊急地震速報（警報）
+                    this.handleEEWData(data);
                 }
+            }
+
+            handleEEWData(data) {
+                const panel = document.getElementById('eew-panel');
+                const compact = document.getElementById('eew-compact');
+                const alertEl = document.getElementById('eew-alert');
+                if (!panel || !compact || !alertEl) return;
+
+                // キャンセルまたは解除
+                if (data.cancelled) {
+                    this.dismissEEW();
+                    this.addActivityFeedItem('⚡', '緊急地震速報: キャンセル', new Date());
+                    return;
+                }
+
+                const eq = data.earthquake || {};
+                const hypo = eq.hypocenter || {};
+                const areas = Array.isArray(data.areas) ? data.areas : [];
+
+                // 全地域から最大予測震度を算出（scaleTo 優先、次に scaleFrom）
+                let maxScale = 0;
+                areas.forEach(a => {
+                    const s = (typeof a.scaleTo === 'number' && a.scaleTo >= 0)
+                        ? a.scaleTo
+                        : (typeof a.scaleFrom === 'number' ? a.scaleFrom : 0);
+                    if (s > maxScale) maxScale = s;
+                });
+                const maxIntensity = this.parseIntensity(maxScale);
+
+                const epicenter = hypo.name || '震源調査中';
+                const mag = (typeof hypo.magnitude === 'number')
+                    ? `M${hypo.magnitude.toFixed(1)}`
+                    : 'M--';
+
+                const originRaw = eq.originTime || eq.arrivalTime || data.issue?.time || '';
+                let timeStr = '--:--:--';
+                if (originRaw) {
+                    const parsed = new Date(typeof originRaw === 'string' ? originRaw.replace(' ', 'T') : originRaw);
+                    if (!isNaN(parsed.getTime())) {
+                        timeStr = parsed.toLocaleTimeString('ja-JP', { hour12: false });
+                    }
+                }
+
+                document.getElementById('eew-epicenter').textContent = `震源: ${epicenter}`;
+                document.getElementById('eew-magnitude').textContent = mag;
+                document.getElementById('eew-max-intensity').textContent = maxIntensity;
+                document.getElementById('eew-serial').textContent =
+                    `第${data.serial || 1}報${data.isFinal ? '（最終）' : ''}`;
+                document.getElementById('eew-time').textContent = `発表: ${timeStr}`;
+
+                // compact 行は残したまま文言を「続報待機中」に切り替え
+                const miniText = compact.querySelector('.eew-mini-text');
+                if (miniText) miniText.textContent = '続報待機中';
+                alertEl.hidden = false;
+                panel.classList.add('eew-active');
+
+                this.addActivityFeedItem('⚡',
+                    `緊急地震速報: ${epicenter} ${mag} 予測最大${maxIntensity}`,
+                    new Date()
+                );
+
+                // 3分後に自動で平常表示へ戻す（同一イベントの続報でタイマー更新）
+                if (this.eewDismissTimer) clearTimeout(this.eewDismissTimer);
+                this.eewDismissTimer = setTimeout(() => this.dismissEEW(), 180000);
+            }
+
+            dismissEEW() {
+                const panel = document.getElementById('eew-panel');
+                const compact = document.getElementById('eew-compact');
+                const alertEl = document.getElementById('eew-alert');
+                if (!panel || !compact || !alertEl) return;
+                const miniText = compact.querySelector('.eew-mini-text');
+                if (miniText) miniText.textContent = '待機中';
+                alertEl.hidden = true;
+                panel.classList.remove('eew-active');
+                if (this.eewDismissTimer) {
+                    clearTimeout(this.eewDismissTimer);
+                    this.eewDismissTimer = null;
+                }
+            }
+
+            // コンソールからの動作確認用: window.monitor.simulateEEW()
+            simulateEEW() {
+                this.handleEEWData({
+                    code: 556,
+                    serial: 3,
+                    earthquake: {
+                        originTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                        hypocenter: {
+                            name: 'テスト震源（宮城県沖）',
+                            magnitude: 7.2,
+                            depth: 50
+                        }
+                    },
+                    areas: [
+                        { scaleFrom: 50, scaleTo: 55, pref: '宮城県', name: '宮城県北部' },
+                        { scaleFrom: 40, scaleTo: 45, pref: '岩手県', name: '岩手県沿岸' }
+                    ],
+                    isFinal: false
+                });
             }
 
             /**
