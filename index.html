@@ -1043,6 +1043,15 @@
             background: #0f1419;
             border-radius: 8px;
         }
+
+        /* 夜間モード（v3.3.1 修正）: body クラスで全体を暗化、map にも追加で filter */
+        body.night-mode {
+            filter: brightness(0.55) contrast(1.05);
+            transition: filter 0.3s ease;
+        }
+        body.night-mode .leaflet-container {
+            filter: brightness(0.7);
+        }
         
         /* ズームコントロールのみにfilterを適用 */
         .leaflet-control-zoom {
@@ -2056,42 +2065,53 @@
             
             // 夜間モード切り替えボタンの追加
             addNightModeToggleButton() {
+                // 重複作成を防止
+                if (document.getElementById('night-mode-toggle')) {
+                    console.log('🌗 夜間モードボタンは既に存在します（重複作成スキップ）');
+                    return;
+                }
+
                 const headerRight = document.querySelector('.header-right');
-                if (!headerRight) return;
-                
+                if (!headerRight) {
+                    console.warn('⚠️ .header-right が見つかりません - 夜間モードボタンを追加できません');
+                    return;
+                }
+
                 const nightModeBtn = document.createElement('button');
                 nightModeBtn.id = 'night-mode-toggle';
                 nightModeBtn.className = 'settings-btn';
                 nightModeBtn.textContent = '🌙 夜間モード';
                 nightModeBtn.title = '地図を暗めに調整';
-                
-                nightModeBtn.onclick = () => {
+
+                nightModeBtn.addEventListener('click', () => {
+                    console.log('🌗 夜間モードボタン クリック検知');
                     this.toggleNightMode();
-                };
-                
-                // 設定ボタンの前に挿入
-                const settingsBtn = headerRight.querySelector('.settings-btn');
+                });
+
+                // 設定ボタン（#settings-btn）の前に挿入
+                const settingsBtn = headerRight.querySelector('#settings-btn');
                 if (settingsBtn) {
                     headerRight.insertBefore(nightModeBtn, settingsBtn);
                 } else {
                     headerRight.appendChild(nightModeBtn);
                 }
+                console.log('🌗 夜間モードボタンを追加しました');
             }
             
-            // 夜間モードの有効/無効化（明度調整機能に統合）
+            // 夜間モードの有効/無効化（body クラス + 地図 filter）
             enableNightMode(enabled) {
                 const nightModeBtn = document.getElementById('night-mode-toggle');
 
                 if (enabled) {
-                    // 50% に下げて視認性を確保（旧 70% は変化が分かりにくかった）
-                    this.updateMapBrightness(50);
+                    // body 全体を暗化（CSS .night-mode）
+                    document.body.classList.add('night-mode');
                     if (nightModeBtn) {
                         nightModeBtn.textContent = '☀️ 標準表示';
                         nightModeBtn.title = '明るい表示に戻す';
                     }
                     this.nightModeEnabled = true;
                 } else {
-                    this.updateMapBrightness(100);
+                    document.body.classList.remove('night-mode');
                     if (nightModeBtn) {
                         nightModeBtn.textContent = '🌙 夜間モード';
                         nightModeBtn.title = '地図を暗めに調整';
@@ -2103,6 +2123,8 @@
                 if (typeof Storage !== 'undefined') {
                     localStorage.setItem('nightModeEnabled', String(this.nightModeEnabled));
                 }
+
+                console.log(`🌗 enableNightMode(${enabled}) 完了 / body.night-mode=${document.body.classList.contains('night-mode')}`);
             }
             
             // 夜間モードのトグル
