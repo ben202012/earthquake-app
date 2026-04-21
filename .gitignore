@@ -31,8 +31,7 @@ __pycache__/
 # Claude temporary files
 .claude/
 
-# Security configuration files
-security-config.js
+# Security configuration files（security-config.js は CSP/CORS のみで秘密情報なしのためトラック対象）
 *.env
 .env.*
 config/secrets.js
