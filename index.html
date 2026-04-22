@@ -3674,6 +3674,26 @@
                     this.updateOverlayInfo(earthquake);
                     this.updateStatistics(earthquake);
 
+                    // 震源からの同心円リップル（装飾）
+                    if (earthquake.latitude && earthquake.longitude) {
+                        this.playEarthquakeRipple(
+                            earthquake.latitude,
+                            earthquake.longitude,
+                            earthquake.magnitude || 4.0
+                        );
+                    }
+
+                    // 巨大地震（M≥6.0 または 震度5強以上）は地図を自動でポップアップ拡大
+                    const intensityLevel = this.getNumericIntensity(earthquake.maxIntensity);
+                    const isMajor = (earthquake.magnitude >= 6.0) || (intensityLevel >= 5.5);
+                    if (isMajor && this.setMapExpanded) {
+                        this.setMapExpanded(true);
+                        this.addActivityFeedItem('🗺️',
+                            `巨大地震検出 (M${earthquake.magnitude} 震度${earthquake.maxIntensity}): 地図を自動拡大`,
+                            new Date()
+                        );
+                    }
+
                     // 通知条件のチェック
                     this.checkAndSendNotification(earthquake);
 
@@ -3788,6 +3808,78 @@
                     ],
                     isFinal: false
                 });
+            }
+
+            // 震源から同心円が広がるリップル演出（装飾用）
+            // 最新地震の影響範囲は破線の残留リングとして残る
+            playEarthquakeRipple(lat, lng, magnitude) {
+                if (!this.map) return;
+
+                // マグニチュードで最終半径を決める（M4→200km、M7→500km、M≥8→上限600km）
+                const finalRadius = Math.min(
+                    Math.max((magnitude - 3) * 80000, 120000),
+                    600000
+                );
+                const color = this.getEarthquakeColor(magnitude);
+                const RIPPLE_COUNT = 3;
+                const DURATION = 2200; // ms
+                const STAGGER = 450;   // ms
+
+                // 既存の残留リングがあれば除去（最新1件のみ保持）
+                if (this.residualQuakeCircle) {
+                    this.map.removeLayer(this.residualQuakeCircle);
+                    this.residualQuakeCircle = null;
+                }
+                // 残留リング（最終半径の破線、控えめな不透明度）
+                this.residualQuakeCircle = L.circle([lat, lng], {
+                    radius: finalRadius,
+                    color: color,
+                    weight: 1,
+                    opacity: 0.35,
+                    fill: true,
+                    fillColor: color,
+                    fillOpacity: 0.05,
+                    interactive: false,
+                    dashArray: '5, 6'
+                }).addTo(this.map);
+
+                for (let i = 0; i < RIPPLE_COUNT; i++) {
+                    setTimeout(() => {
+                        if (!this.map) return;
+                        const circle = L.circle([lat, lng], {
+                            radius: 0,
+                            color: color,
+                            weight: 2,
+                            opacity: 0.75,
+                            fill: true,
+                            fillColor: color,
+                            fillOpacity: 0.12,
+                            interactive: false
+                        }).addTo(this.map);
+
+                        const startTime = performance.now();
+                        const step = (now) => {
+                            const t = Math.min((now - startTime) / DURATION, 1);
+                            const eased = 1 - Math.pow(1 - t, 2); // ease-out-quad
+                            circle.setRadius(finalRadius * eased);
+                            circle.setStyle({
+                                opacity: 0.75 * (1 - t),
+                                fillOpacity: 0.12 * (1 - t)
+                            });
+                            if (t < 1) {
+                                requestAnimationFrame(step);
+                            } else {
+                                this.map.removeLayer(circle);
+                            }
+                        };
+                        requestAnimationFrame(step);
+                    }, i * STAGGER);
+                }
+            }
+
+            // コンソール動作確認用
+            simulateRipple(lat = 38.3, lng = 141.5, mag = 6.0) {
+                this.playEarthquakeRipple(lat, lng, mag);
             }
 
             /**
