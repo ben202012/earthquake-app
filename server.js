@@ -1,9 +1,11 @@
 const http = require('http');
 const https = require('https');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const crypto = require('crypto');
+const { exec } = require('child_process');
 
 // セキュリティ設定の読み込み
 let SECURITY_CONFIG;
@@ -26,7 +28,38 @@ try {
     };
 }
 
-const port = 8080;
+const DEFAULT_PORT = 8080;
+const MAX_PORT = 8099;
+
+/**
+ * 指定範囲内で利用可能なポートを探す
+ */
+function findAvailablePort(startPort, maxPort) {
+    return new Promise((resolve, reject) => {
+        function tryPort(p) {
+            if (p > maxPort) {
+                reject(new Error(`利用可能なポートが見つかりません (${startPort}-${maxPort})`));
+                return;
+            }
+            const tester = net.createServer();
+            tester.once('error', (err) => {
+                if (err.code === 'EADDRINUSE') {
+                    console.log(`⚠️ ポート ${p} は使用中です。次を試します...`);
+                    tryPort(p + 1);
+                } else {
+                    reject(err);
+                }
+            });
+            tester.once('listening', () => {
+                tester.close(() => resolve(p));
+            });
+            // host を指定しない → 実サーバー (server.listen) のデフォルト (IPv6 ::/IPv4 両対応) と同じ振る舞いにする
+            // 127.0.0.1 だけでテストすると、ゾンビプロセスが IPv6 ::8080 を握っている場合に誤検知して衝突する
+            tester.listen(p);
+        }
+        tryPort(startPort);
+    });
+}
 
 /**
  * セキュアなnonce生成関数
@@ -377,6 +410,32 @@ const server = http.createServer((req, res) => {
         }));
         return;
     }
+
+    // シャットダウンエンドポイント（ブラウザ UI の「終了」ボタンから呼び出される）
+    if (pathname === '/api/shutdown' && req.method === 'POST') {
+        // CSRF 対策: Origin ヘッダが許可リストのオリジンと一致するときだけ受理
+        // （ブラウザが強制付与し改竄不可。悪意のある外部サイトからの POST を遮断）
+        const origin = req.headers.origin;
+        if (!origin || !SECURITY_CONFIG.cors.allowedOrigins.includes(origin)) {
+            console.warn(`🚫 シャットダウン要求を拒否: origin="${origin || '(なし)'}"`);
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Origin not allowed' }));
+            return;
+        }
+        console.log('🛑 シャットダウン要求を受信しました');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'shutting down' }));
+        // レスポンスが確実に送信されるよう遅延してから停止
+        setTimeout(() => {
+            server.close(() => {
+                console.log('✅ サーバー停止完了 (ブラウザ要求)');
+                process.exit(0);
+            });
+            // 応答待ちコネクションがあってもフェイルセーフで終了
+            setTimeout(() => process.exit(0), 2000);
+        }, 500);
+        return;
+    }
     
     // 静的ファイル配信
     // Default to index.html
@@ -429,14 +488,42 @@ const server = http.createServer((req, res) => {
     });
 });
 
-server.listen(port, () => {
-    console.log(`🌏 地震・津波情報表示システム v3.3 サーバーが起動しました`);
-    console.log(`📍 アクセスURL: http://localhost:${port}`);
-    console.log(`🔧 メインアプリ: http://localhost:${port}/index.html`);
-    console.log(`🧪 音声テスト: http://localhost:${port}/audio-test.html`);
-    console.log(`📡 プロキシAPI: http://localhost:${port}/api/proxy/[usgs|emsc|jma|noaa]`);
-    console.log(`📊 サーバー状態: http://localhost:${port}/api/status`);
-    console.log(`💾 停止するには Ctrl+C を押してください`);
+findAvailablePort(DEFAULT_PORT, MAX_PORT).then((port) => {
+    // 選択されたポートを CORS 許可 origin に動的追加
+    const dynamicOrigin = `http://localhost:${port}`;
+    if (!SECURITY_CONFIG.cors.allowedOrigins.includes(dynamicOrigin)) {
+        SECURITY_CONFIG.cors.allowedOrigins.push(dynamicOrigin);
+    }
+
+    server.listen(port, () => {
+        if (port !== DEFAULT_PORT) {
+            console.log(`ℹ️ デフォルトポート ${DEFAULT_PORT} が使用中のため、ポート ${port} で起動します`);
+        }
+        console.log(`🌏 地震・津波情報表示システム v3.3 サーバーが起動しました`);
+        console.log(`📍 アクセスURL: http://localhost:${port}`);
+        console.log(`🔧 メインアプリ: http://localhost:${port}/index.html`);
+        console.log(`🧪 音声テスト: http://localhost:${port}/audio-test.html`);
+        console.log(`📡 プロキシAPI: http://localhost:${port}/api/proxy/[usgs|emsc|jma|noaa]`);
+        console.log(`📊 サーバー状態: http://localhost:${port}/api/status`);
+        console.log(`💾 停止するには Ctrl+C もしくはブラウザ UI の「終了」ボタン`);
+
+        // AUTO_OPEN=0 の場合はスキップ（例: node server.js を手動で起動する場合）
+        if (process.env.AUTO_OPEN !== '0') {
+            const openCmd = process.platform === 'darwin'
+                ? `open http://localhost:${port}`
+                : process.platform === 'win32'
+                ? `start http://localhost:${port}`
+                : `xdg-open http://localhost:${port}`;
+            exec(openCmd, (err) => {
+                if (err) console.warn('⚠️ ブラウザ自動起動失敗:', err.message);
+                else console.log('🌐 ブラウザを開きました');
+            });
+        }
+    });
+}).catch((err) => {
+    console.error('❌ サーバー起動失敗:', err.message);
+    console.error(`   ポート ${DEFAULT_PORT}-${MAX_PORT} すべて使用中の可能性があります。`);
+    process.exit(1);
 });
 
 process.on('SIGINT', () => {

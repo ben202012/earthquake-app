@@ -168,6 +168,36 @@
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-1px);
         }
+
+        /* 終了ボタン（危険操作は赤系で区別） */
+        .shutdown-btn {
+            background: rgba(255, 42, 42, 0.15);
+            border: 1px solid rgba(255, 42, 42, 0.4);
+            color: #ff8a8a;
+        }
+        .shutdown-btn:hover {
+            background: rgba(255, 42, 42, 0.3);
+            border-color: rgba(255, 42, 42, 0.7);
+            color: #fff;
+        }
+
+        /* サーバー停止時のフルスクリーンオーバーレイ */
+        .shutdown-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(12, 22, 35, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+        }
+        .shutdown-overlay .icon { font-size: 56px; margin-bottom: 16px; }
+        .shutdown-overlay .title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+        .shutdown-overlay .desc { font-size: 13px; color: #94a3b8; text-align: center; max-width: 320px; line-height: 1.6; }
         
         /* === サイドバー === */
         .left-sidebar {
@@ -1950,8 +1980,14 @@
             <div class="header-right">
                 <div class="current-time" id="current-time">--:--:--</div>
                 <button class="settings-btn" id="settings-btn">⚙️ 設定</button>
+                <button class="settings-btn shutdown-btn" id="shutdown-btn" type="button" title="サーバーを停止してシステムを終了">⏻ 終了</button>
             </div>
         </header>
+        <div class="shutdown-overlay" id="shutdown-overlay" hidden>
+            <div class="icon">🛑</div>
+            <div class="title">サーバーを停止しました</div>
+            <div class="desc">このタブは閉じて構いません。再起動するには <code>./start.sh</code> または <code>node server.js</code> を実行してください。</div>
+        </div>
         
         <!-- 左サイドバー -->
         <aside class="left-sidebar">
@@ -2258,6 +2294,9 @@
 
                     // 地震リスト手動更新ボタン
                     this.setupRefreshButton();
+
+                    // 終了ボタン
+                    this.setupShutdownButton();
 
                     // 余震確率表を60秒毎に再計算（経過時間を反映）
                     setInterval(() => this.renderAftershockProbability(), 60 * 1000);
@@ -4300,6 +4339,34 @@
                 const now = new Date();
                 el.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
                 el.title = `最終更新: ${now.toLocaleString('ja-JP')}`;
+            }
+
+            setupShutdownButton() {
+                const btn = document.getElementById('shutdown-btn');
+                if (!btn || btn.dataset.bound === '1') return;
+                btn.dataset.bound = '1';
+                btn.addEventListener('click', async () => {
+                    if (!confirm('サーバーを停止してシステムを終了します。よろしいですか？')) return;
+                    btn.disabled = true;
+                    btn.textContent = '⏻ 停止中...';
+                    try {
+                        const res = await fetch('/api/shutdown', { method: 'POST' });
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    } catch (e) {
+                        console.error('シャットダウン要求失敗:', e);
+                        // 接続が切れることは想定内。オーバーレイは表示する
+                    }
+                    // オーバーレイを表示
+                    const overlay = document.getElementById('shutdown-overlay');
+                    if (overlay) overlay.hidden = false;
+                    // 各種ポーリング・タイマーを止める
+                    if (this.intervals) {
+                        Object.values(this.intervals).forEach(id => { try { clearInterval(id); } catch {} });
+                    }
+                    if (this.websocket) { try { this.websocket.close(); } catch {} }
+                    // タブを閉じる試行（スクリプトで開いたタブ以外は無視される）
+                    setTimeout(() => { try { window.close(); } catch {} }, 800);
+                });
             }
 
             setupRefreshButton() {
