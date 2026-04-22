@@ -979,6 +979,86 @@
             max-height: 200px;
             overflow-y: auto;
         }
+
+        /* === 余震確率表 === */
+        .aftershock-note {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
+        .aftershock-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .aftershock-empty {
+            color: #94a3b8;
+            font-size: 11px;
+            text-align: center;
+            padding: 8px 4px;
+        }
+
+        .aftershock-mainshock {
+            font-size: 11px;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .aftershock-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .aftershock-table th {
+            color: #94a3b8;
+            font-weight: 500;
+            text-align: center;
+            padding: 3px 2px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .aftershock-table td {
+            text-align: center;
+            padding: 4px 2px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .aftershock-table td.row-label {
+            color: #e2e8f0;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .aftershock-table td.prob {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .aftershock-table td.prob.high {
+            color: #ff6b6b;
+        }
+
+        .aftershock-table td.prob.mid {
+            color: #fbbf24;
+        }
+
+        .aftershock-table td.prob.low {
+            color: #94a3b8;
+        }
+
+        .aftershock-footer {
+            font-size: 9px;
+            color: #64748b;
+            text-align: right;
+            margin-top: 6px;
+        }
         
         .feed-item {
             padding: 6px 10px;
@@ -2052,10 +2132,29 @@
                     </div>
                 </div>
 
-                <!-- アクティビティフィード -->
+                <!-- 余震確率表 -->
                 <div class="monitoring-section">
-                    <div class="monitoring-title">📡 アクティビティ</div>
-                    <div class="activity-feed" id="activity-feed"></div>
+                    <div class="monitoring-title">📈 余震確率 <span class="aftershock-note" id="aftershock-note">(本震情報待機中)</span></div>
+                    <div class="aftershock-panel" id="aftershock-panel">
+                        <div class="aftershock-empty" id="aftershock-empty">
+                            直近72時間以内に M5.5 以上の地震がありません
+                        </div>
+                        <div class="aftershock-content" id="aftershock-content" hidden>
+                            <div class="aftershock-mainshock" id="aftershock-mainshock">本震: --</div>
+                            <table class="aftershock-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>24時間</th>
+                                        <th>3日</th>
+                                        <th>7日</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="aftershock-tbody"></tbody>
+                            </table>
+                            <div class="aftershock-footer">改良大森・G-R 則による統計推定</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -2159,7 +2258,10 @@
 
                     // 地震リスト手動更新ボタン
                     this.setupRefreshButton();
-                    
+
+                    // 余震確率表を60秒毎に再計算（経過時間を反映）
+                    setInterval(() => this.renderAftershockProbability(), 60 * 1000);
+
                     // 接続状態を表示
                     this.updateConnectionStatus('p2p-status', false);
                     this.updateConnectionStatus('api-status', false);
@@ -3562,9 +3664,9 @@
                     const earthquake = this.parseEarthquakeData(data);
                     this.earthquakeHistory.unshift(earthquake);
 
-                    // 履歴を最新100件に制限（過去１週間の最大震度・統計の正確性確保のため）
-                    if (this.earthquakeHistory.length > 100) {
-                        this.earthquakeHistory = this.earthquakeHistory.slice(0, 100);
+                    // 履歴を最新300件に制限（週間回数の取りこぼし防止のため余裕を持たせる）
+                    if (this.earthquakeHistory.length > 300) {
+                        this.earthquakeHistory = this.earthquakeHistory.slice(0, 300);
                     }
 
                     this.updateEarthquakeDisplay();
@@ -3917,7 +4019,100 @@
                 });
 
                 this.renderFrequencyChart();
+                this.renderAftershockProbability();
                 this.updateLastUpdatedDisplay();
+            }
+
+            // 改良大森 + G-R 則で M≥M' の余震が [t1,t2]日の窓に発生する確率を返す
+            // 出典: Reasenberg & Jones (1989) 型。パラメータは汎用値。
+            computeAftershockProbability(mainMag, cutoffMag, t1Days, t2Days) {
+                const a = -1.67, b = 1.0, c = 0.05, p = 1.08;
+                const K = Math.pow(10, a + b * (mainMag - cutoffMag));
+                const t1 = Math.max(t1Days, 0);
+                const t2 = Math.max(t2Days, t1 + 1e-6);
+                let expected;
+                if (Math.abs(p - 1) < 1e-3) {
+                    expected = K * Math.log((t2 + c) / (t1 + c));
+                } else {
+                    expected = K * (Math.pow(t2 + c, 1 - p) - Math.pow(t1 + c, 1 - p)) / (1 - p);
+                }
+                if (!isFinite(expected) || expected < 0) return 0;
+                return 1 - Math.exp(-expected);
+            }
+
+            // 直近72h で最大マグニチュードの本震を探し、余震確率表をレンダリング
+            renderAftershockProbability() {
+                const empty = document.getElementById('aftershock-empty');
+                const content = document.getElementById('aftershock-content');
+                const note = document.getElementById('aftershock-note');
+                const tbody = document.getElementById('aftershock-tbody');
+                if (!empty || !content || !note || !tbody) return;
+
+                const now = Date.now();
+                const windowMs = 72 * 3600 * 1000;
+                const threshold = 5.5;
+
+                let main = null;
+                (this.earthquakeHistory || []).forEach(eq => {
+                    const t = eq.time instanceof Date ? eq.time.getTime() : new Date(eq.time).getTime();
+                    if (!t || now - t > windowMs) return;
+                    const m = typeof eq.magnitude === 'number' ? eq.magnitude : parseFloat(eq.magnitude);
+                    if (!isFinite(m) || m < threshold) return;
+                    if (!main || m > main.magnitude) main = { magnitude: m, time: t, location: eq.location };
+                });
+
+                if (!main) {
+                    empty.hidden = false;
+                    content.hidden = true;
+                    note.textContent = '(本震情報待機中)';
+                    return;
+                }
+
+                empty.hidden = true;
+                content.hidden = false;
+
+                const elapsedMs = now - main.time;
+                const elapsedDays = elapsedMs / (24 * 3600 * 1000);
+                const relTime = elapsedMs < 3600 * 1000
+                    ? `${Math.max(1, Math.round(elapsedMs / 60000))}分前`
+                    : elapsedMs < 24 * 3600 * 1000
+                    ? `${Math.round(elapsedMs / 3600000)}時間前`
+                    : `${Math.floor(elapsedDays)}日前`;
+
+                document.getElementById('aftershock-mainshock').textContent =
+                    `本震: M${main.magnitude.toFixed(1)} ${main.location || ''} (${relTime})`;
+                note.textContent = '';
+
+                const windows = [
+                    { label: '24時間', t2: elapsedDays + 1 },
+                    { label: '3日',   t2: elapsedDays + 3 },
+                    { label: '7日',   t2: elapsedDays + 7 }
+                ];
+                const rows = [
+                    { cutoff: main.magnitude - 1.0 },
+                    { cutoff: main.magnitude - 2.0 }
+                ];
+
+                tbody.textContent = '';
+                rows.forEach(row => {
+                    const tr = document.createElement('tr');
+                    const labelCell = document.createElement('td');
+                    labelCell.className = 'row-label';
+                    labelCell.textContent = `M${row.cutoff.toFixed(1)}以上`;
+                    tr.appendChild(labelCell);
+
+                    windows.forEach(w => {
+                        const p = this.computeAftershockProbability(
+                            main.magnitude, row.cutoff, elapsedDays, w.t2
+                        );
+                        const pct = Math.round(p * 100);
+                        const cell = document.createElement('td');
+                        cell.className = 'prob ' + (pct >= 70 ? 'high' : pct >= 30 ? 'mid' : 'low');
+                        cell.textContent = `${pct}%`;
+                        tr.appendChild(cell);
+                    });
+                    tbody.appendChild(tr);
+                });
             }
 
             updateLastUpdatedDisplay() {
@@ -4122,7 +4317,11 @@
                 
                 const weekCountEl = document.getElementById('week-count');
                 if (weekCountEl) {
-                    weekCountEl.textContent = this.stats.weekCount;
+                    // 履歴が上限(300)に張り付いており、その大半が週内なら取りこぼしの可能性あり → "300+" 表示
+                    const historyLimit = 300;
+                    const capped = this.earthquakeHistory.length >= historyLimit
+                        && this.stats.weekCount >= historyLimit;
+                    weekCountEl.textContent = capped ? `${historyLimit}+` : this.stats.weekCount;
                 }
                 
                 const maxIntensityEl = document.getElementById('max-intensity');
@@ -4180,12 +4379,6 @@
                 const settingsFeed = document.getElementById('settings-activity-feed');
                 if (settingsFeed) {
                     this.updateActivityFeedDisplay(settingsFeed);
-                }
-
-                // 右パネルのアクティビティフィードを更新
-                const mainFeed = document.getElementById('activity-feed');
-                if (mainFeed) {
-                    this.updateActivityFeedDisplay(mainFeed);
                 }
             }
             
@@ -4257,7 +4450,7 @@
 
                     const fetchStart = performance.now();
 
-                    const response = await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=100', {
+                    const response = await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=300', {
                         signal: controller.signal,
                         headers: {
                             'Accept': 'application/json',
