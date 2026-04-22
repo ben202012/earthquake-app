@@ -3744,11 +3744,9 @@
 
                 const originRaw = eq.originTime || eq.arrivalTime || data.issue?.time || '';
                 let timeStr = '--:--:--';
-                if (originRaw) {
-                    const parsed = new Date(typeof originRaw === 'string' ? originRaw.replace(' ', 'T') : originRaw);
-                    if (!isNaN(parsed.getTime())) {
-                        timeStr = parsed.toLocaleTimeString('ja-JP', { hour12: false });
-                    }
+                const parsedOrigin = this.parseEEWTime(originRaw);
+                if (parsedOrigin) {
+                    timeStr = parsedOrigin.toLocaleTimeString('ja-JP', { hour12: false });
                 }
 
                 document.getElementById('eew-epicenter').textContent = `震源: ${epicenter}`;
@@ -3769,9 +3767,92 @@
                     new Date()
                 );
 
+                // EEW 発報時は地図を自動拡大（波の伝播を見せるため）
+                if (this.setMapExpanded) this.setMapExpanded(true);
+
+                // P/S波 物理ベース可視化を開始
+                if (typeof hypo.latitude === 'number' && typeof hypo.longitude === 'number' && originRaw) {
+                    this.startEEWWaveAnimation(hypo.latitude, hypo.longitude, originRaw);
+                }
+
                 // 3分後に自動で平常表示へ戻す（同一イベントの続報でタイマー更新）
                 if (this.eewDismissTimer) clearTimeout(this.eewDismissTimer);
                 this.eewDismissTimer = setTimeout(() => this.dismissEEW(), 180000);
+            }
+
+            // EEW の origin time を robust に Date 化（P2P "YYYY/MM/DD HH:MM:SS" / ISO / Date object 対応）
+            parseEEWTime(raw) {
+                if (!raw) return null;
+                if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+                if (typeof raw !== 'string') return null;
+                // "YYYY/MM/DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS"（ES2019+ はこれをローカル時刻として解釈）
+                const normalized = raw.replace(/\//g, '-').replace(' ', 'T');
+                const d = new Date(normalized);
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            // EEW の P波・S波を震源から実時間で広げるアニメーション
+            startEEWWaveAnimation(lat, lng, originTimeRaw) {
+                if (!this.map) return;
+                this.stopEEWWaveAnimation();
+
+                const originDate = this.parseEEWTime(originTimeRaw);
+                if (!originDate) return;
+                const originMs = originDate.getTime();
+
+                const V_P = 7000;   // P波 速度 m/s
+                const V_S = 3800;   // S波 速度 m/s
+                const MAX_RADIUS = 1500000; // 1500km 上限
+
+                // 外側: P波（青）
+                const pCircle = L.circle([lat, lng], {
+                    radius: 1,
+                    color: '#4a9eff',
+                    weight: 2,
+                    opacity: 0.85,
+                    fill: false,
+                    interactive: false,
+                    dashArray: '6, 4'
+                }).addTo(this.map);
+
+                // 内側: S波（赤、薄いフィル付き）
+                const sCircle = L.circle([lat, lng], {
+                    radius: 1,
+                    color: '#ff2a2a',
+                    weight: 3,
+                    opacity: 0.9,
+                    fill: true,
+                    fillColor: '#ff2a2a',
+                    fillOpacity: 0.08,
+                    interactive: false
+                }).addTo(this.map);
+
+                this.eewWaveState = { pCircle, sCircle, raf: null };
+
+                const step = () => {
+                    if (!this.eewWaveState) return;
+                    const elapsedSec = (Date.now() - originMs) / 1000;
+                    const rP = Math.min(Math.max(elapsedSec * V_P, 0), MAX_RADIUS);
+                    const rS = Math.min(Math.max(elapsedSec * V_S, 0), MAX_RADIUS);
+                    pCircle.setRadius(rP);
+                    sCircle.setRadius(rS);
+                    if (rP >= MAX_RADIUS && rS >= MAX_RADIUS) {
+                        this.stopEEWWaveAnimation();
+                        return;
+                    }
+                    this.eewWaveState.raf = requestAnimationFrame(step);
+                };
+                this.eewWaveState.raf = requestAnimationFrame(step);
+            }
+
+            stopEEWWaveAnimation() {
+                if (!this.eewWaveState) return;
+                if (this.eewWaveState.raf) cancelAnimationFrame(this.eewWaveState.raf);
+                if (this.map) {
+                    if (this.eewWaveState.pCircle) this.map.removeLayer(this.eewWaveState.pCircle);
+                    if (this.eewWaveState.sCircle) this.map.removeLayer(this.eewWaveState.sCircle);
+                }
+                this.eewWaveState = null;
             }
 
             dismissEEW() {
@@ -3787,17 +3868,23 @@
                     clearTimeout(this.eewDismissTimer);
                     this.eewDismissTimer = null;
                 }
+                // P/S波アニメーションも停止
+                this.stopEEWWaveAnimation();
             }
 
             // コンソールからの動作確認用: window.monitor.simulateEEW()
-            simulateEEW() {
+            // elapsedSec を指定すると、その秒数だけ発生時刻を遡らせて大きな波を即座に描画できる
+            simulateEEW(elapsedSec = 0) {
+                const origin = new Date(Date.now() - elapsedSec * 1000);
                 this.handleEEWData({
                     code: 556,
                     serial: 3,
                     earthquake: {
-                        originTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                        originTime: origin,
                         hypocenter: {
                             name: 'テスト震源（宮城県沖）',
+                            latitude: 38.3,
+                            longitude: 141.8,
                             magnitude: 7.2,
                             depth: 50
                         }
