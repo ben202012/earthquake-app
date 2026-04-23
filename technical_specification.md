@@ -1,12 +1,16 @@
-# 🌏 地震情報システム v3.3.1 - 技術仕様書（CSP対応・TV同等津波ライブ表示・P2P code 552 連携）
+# 🌏 地震情報システム v3.4 - 技術仕様書（UI 刷新・EEW 可視化・余震確率・自宅位置 ETA）
+
+> **📝 v3.4（2026-04-23）更新注記**
+> v3.4 で UI 情報密度全面刷新・EEW パネル 2段構成・P/S 波物理可視化・余震確率表・自宅位置 ETA・ワンタッチ起動・空きポート自動探索・/api/shutdown（Origin 検証付き）を追加。詳細は「15. v3.4 新機能技術仕様」節を参照。
 
 > **📝 v3.3.1（2026-04-21）更新注記**
 > このドキュメントは v3.2 時点の設計として書かれており、本文中には当時の
 > 数値目標・用語が残っています。最新の実装状況・実測値・仕様変更点は
-> `README.md` の「🆕 v3.3 / v3.3.1 の変更点」節を正とします。具体的な
+> `README.md` の「🆕 v3.3 / v3.3.1 / v3.4 の変更点」節を正とします。具体的な
 > 齟齬: 「監視」系用語は UI / コードでは「情報」系に置換済み、P2P
-> `limit=10` は `limit=100` に拡大、「稼働率 98.5%」「平均応答時間 250ms」
-> などの定量値は未実測であったため本 README からは削除済み。
+> `limit=10` は `limit=100`（v3.4 で offset ページングにより合計 300 件）に拡大、
+> 「稼働率 98.5%」「平均応答時間 250ms」などの定量値は未実測であったため
+> 本 README からは削除済み。
 
 ## 1. システム概要
 
@@ -1115,6 +1119,252 @@ const TSUNAMI_STATUS_COLORS = {
 
 ---
 
+## 15. v3.4 新機能技術仕様(2026-04-22 / 2026-04-23)
+
+### 15.1 UI ダッシュボード刷新
+
+#### 15.1.1 新レイアウト構成
+```
+.earthquake-dashboard (grid)
+├── .main-header (70px)
+│   └── header-right: 時計 / 📍位置情報 / 🗑️削除 / ⚙️設定 / ⏻終了
+├── .left-sidebar (350px)
+│   ├── .eew-panel (新) — compact/alert 2段
+│   ├── .stats-grid (2×2 → 1×4)
+│   └── .earthquake-list (行形式 28px/item)
+├── .main-content (flex-column、中央)
+│   ├── .map-container (280px、拡大時 flex:1)
+│   └── .info-dashboard (震度別発生回数チャート)
+└── .right-panel (400px)
+    ├── .metrics-grid (2×2 → 1×4)
+    ├── .tsunami-warning-panel
+    ├── .coordinate-info (2×2 → 1×4)
+    └── .aftershock-panel (新)
+```
+
+#### 15.1.2 情報密度の定量比較
+| 項目 | v3.3.1 | v3.4 | 改善 |
+|------|--------|------|------|
+| 地震リスト 1件の高さ | 56px | 28px | ×2 |
+| 統計カード列数 | 2 | 4 | ×2 |
+| メトリクスカード列数 | 2 | 4 | ×2 |
+| 震源情報カード列数 | 2 | 4 | ×2 |
+| 1画面の表示件数（1080p） | 約 5件 | 約 10件 | ×2 |
+
+### 15.2 コンパクト地図モード
+
+#### 15.2.1 CSS 構造
+```css
+.main-content { display: flex; flex-direction: column; }
+.map-container { width: 100%; height: 280px; position: relative; }
+.main-content.map-expanded .map-container { flex: 1; height: auto; }
+.main-content.map-expanded .info-dashboard { display: none; }
+.main-content:not(.map-expanded) .map-overlay,
+.main-content:not(.map-expanded) .jma-tsunami-legend { display: none; }
+```
+
+#### 15.2.2 拡大/縮小フロー
+```javascript
+setMapExpanded(expanded) {
+  // トグル → main.classList.toggle('map-expanded', expanded)
+  // → setTimeout(320ms) で map.invalidateSize() 再描画
+  // → 縮小 or zoom < 5 なら computeEffectiveFitBounds() で再フィット
+}
+
+computeEffectiveFitBounds() {
+  // japanBounds + activeTsunamiAreas の bounds を合成
+  // 津波が沖縄にある場合、compact でも沖縄を含むように拡張
+}
+```
+
+#### 15.2.3 bounds とタイル minZoom
+- `japanBounds = [[30.0, 128.0], [46.0, 146.5]]`（本州中心）
+- タイルレイヤー `minZoom: 3`（旧 `4` → ゾンビプロセスの IPv6 重なり検出漏れも回避）
+- `fitBounds(..., { padding: [10, 10] })` で狭いコンパクト領域にも収まるよう調整
+
+### 15.3 緊急地震速報（EEW） code 556 処理
+
+#### 15.3.1 受信ハンドラ
+```javascript
+handleEarthquakeData(data) {
+  if (data.code === 556) this.handleEEWData(data);
+}
+
+handleEEWData(data) {
+  // cancelled → dismissEEW() で即座に平常表示へ
+  // areas.scaleTo/scaleFrom から maxIntensity 推定
+  // parseEEWTime(originTime) で "YYYY/MM/DD HH:MM:SS" と Date obj 両対応
+  // compact 行を「続報待機中」に、alert カードに詳細を出力
+  // setMapExpanded(true) で地図拡大、P/S 波アニメ開始、S 波 ETA 開始
+  // 3分 dismiss タイマーセット（続報で更新）
+}
+```
+
+#### 15.3.2 P/S 波同心円アニメ
+```javascript
+const V_P = 7000; // m/s
+const V_S = 3800; // m/s
+const MAX_RADIUS = 1500000; // 1500km
+
+// requestAnimationFrame で毎フレーム更新
+const step = () => {
+  const elapsed = (Date.now() - originMs) / 1000;
+  pCircle.setRadius(Math.min(elapsed * V_P, MAX_RADIUS));
+  sCircle.setRadius(Math.min(elapsed * V_S, MAX_RADIUS));
+  if (両方 max なら stopEEWWaveAnimation();
+};
+```
+
+**モデル制限**: 震源深さ無視（2D）、速度固定。NHK 放送の同等レベル。厳密な到達時刻は JMA の走時表が必要。
+
+#### 15.3.3 自宅位置 + S 波 ETA
+```javascript
+// Geolocation 取得 → localStorage('userLocation')
+requestUserLocation() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    this.userLocation = { lat, lng };
+    localStorage.setItem('userLocation', JSON.stringify(this.userLocation));
+    this.placeUserMarker(); // 🏠 L.marker
+  });
+}
+
+// ハバーシン距離 → S 波 ETA カウントダウン
+haversineDistance(lat1, lng1, lat2, lng2) { /* 地球半径 6371km */ }
+
+startEEWUserETA(epicenterLat, epicenterLng, originMs) {
+  const distKm = this.haversineDistance(...);
+  // 0.5秒毎に etaSec = distKm / V_S - elapsed を計算
+  // 到達時（etaSec <= 0）は "到達済" 表示 → 5秒後に ETA パネルのみ非表示
+}
+```
+
+### 15.4 余震確率表（改良大森 + G-R 則）
+
+#### 15.4.1 数式とパラメータ
+```
+λ(t, M') = 10^(a + b*(Mm - M')) * (t + c)^(-p)
+N[t1,t2] = ∫ λ dt = 10^(a + b*(Mm - M')) * ((t2+c)^(1-p) - (t1+c)^(1-p)) / (1-p)
+P = 1 - exp(-N)
+
+パラメータ: a=-1.67, b=1.0, c=0.05 day, p=1.08 (Reasenberg & Jones 1989 型)
+```
+
+#### 15.4.2 表示仕様
+- 直近 72h 内で M ≥ 5.5 の最大地震を本震と見なす
+- 2行（本震-1 / 本震-2）× 3列（24時間以内 / 3日以内 / 7日以内）
+- 色分け: ≥70% 赤 / ≥30% 黄 / その他 灰
+- 60秒毎に `renderAftershockProbability()` を再実行（経過時間反映）
+
+### 15.5 P2P 履歴取得のページング
+
+#### 15.5.1 API 制限と対応
+P2P API `v2/history` の `limit` 上限は 100。v3.4 で 300 件取得するため `offset` ページングを実装：
+
+```javascript
+async loadHistoricalData() {
+  const PAGE_SIZE = 100;
+  const MAX_PAGES = 3;
+  const all = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const url = `.../v2/history?codes=551&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`;
+    const res = await fetch(url, { signal, headers });
+    if (!res.ok) {
+      if (page === 0) throw new Error(...); // 1ページ目のみ致命的
+      break; // 2ページ目以降は既取得分で継続
+    }
+    const data = await res.json();
+    if (data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
+  this.earthquakeHistory = all.map(item => this.parseEarthquakeData(item));
+}
+```
+
+#### 15.5.2 週間回数の取りこぼし明示
+```javascript
+// weekCount が履歴上限 300 に張り付いた場合は「300+」表示
+const capped = this.earthquakeHistory.length >= 300 && this.stats.weekCount >= 300;
+weekCountEl.textContent = capped ? '300+' : this.stats.weekCount;
+```
+
+### 15.6 サーバー運用機能
+
+#### 15.6.1 空きポート自動探索
+```javascript
+function findAvailablePort(startPort, maxPort) {
+  // net.createServer().listen(p) で試行、EADDRINUSE なら p+1
+  // host 指定なし → IPv6 :: を含む全インターフェースをテスト
+  // （127.0.0.1 限定でテストするとゾンビ IPv6 :: を検出できない）
+}
+// 使用: findAvailablePort(8080, 8099).then(port => server.listen(port, ...))
+// 選択されたポートを SECURITY_CONFIG.cors.allowedOrigins に動的追加
+```
+
+#### 15.6.2 /api/shutdown エンドポイント（Origin 検証付き）
+```javascript
+if (pathname === '/api/shutdown' && req.method === 'POST') {
+  const origin = req.headers.origin;
+  if (!origin || !SECURITY_CONFIG.cors.allowedOrigins.includes(origin)) {
+    res.writeHead(403); res.end(JSON.stringify({ error: 'Origin not allowed' }));
+    return;
+  }
+  res.writeHead(200); res.end(JSON.stringify({ status: 'shutting down' }));
+  setTimeout(() => {
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 2000); // フェイルセーフ
+  }, 500);
+}
+```
+
+**CSRF 対策**: Origin ヘッダはブラウザが強制付与し JS から改竄不可。異オリジンからの POST を遮断。
+**副次効果**: localStorage の `userLocation` はシャットダウン時にクライアント側で `clearUserLocation({silent:true})` が呼ばれプライバシー保護。
+
+#### 15.6.3 ブラウザ自動起動
+```javascript
+// 起動完了後
+if (process.env.AUTO_OPEN !== '0') {
+  const openCmd = process.platform === 'darwin' ? `open http://localhost:${port}`
+                : process.platform === 'win32'  ? `start http://localhost:${port}`
+                : `xdg-open http://localhost:${port}`;
+  exec(openCmd);
+}
+```
+
+#### 15.6.4 start.command
+macOS で Finder からダブルクリック可能な起動ラッパー（`.command` 拡張子）。
+```bash
+#!/usr/bin/env bash
+cd "$(dirname "$0")"
+exec ./start.sh
+```
+
+### 15.7 地震演出（リップル + 自動拡大）
+
+#### 15.7.1 同心円リップル
+```javascript
+playEarthquakeRipple(lat, lng, magnitude) {
+  const finalRadius = Math.min(Math.max((magnitude - 3) * 80000, 120000), 600000);
+  // 既存の残留リング（破線）を除去
+  // 3本の L.circle を 0.45秒ずらして 2.2秒で拡散（ease-out-quad、opacity と fillOpacity を線形減衰）
+  // 最後に残留リング（dashArray, opacity 0.35）を最新1件のみ保持
+}
+```
+
+#### 15.7.2 巨大地震の自動拡大
+```javascript
+// handleEarthquakeData 内で:
+const intensityLevel = this.getNumericIntensity(earthquake.maxIntensity);
+const isMajor = earthquake.magnitude >= 6.0 || intensityLevel >= 5.5;
+if (isMajor) this.setMapExpanded(true);
+```
+
+### 15.8 v3.4 削除項目
+- `startWeatherRSSMonitoring()` / `parseWeatherRSS()` — allorigins.win 経由の Yahoo 津波 RSS 取得（v3.1 で廃止方針だが残骸コードが残り、5分毎に CSP 違反ログを生成していた）
+- 右パネルの `#activity-feed`（余震確率表に差し替え。アクティビティログは `#settings-activity-feed` で引き続き確認可能）
+
+---
+
 ## セキュリティ強化システム v3.1
 
 ### 新規セキュリティコンポーネント
@@ -1168,9 +1418,9 @@ class Utils {
 
 ---
 
-**最終更新**: 2026年4月20日(v3.3 TV 同等津波表示リリース)
-**完成度**: **85%達成**(TV 同等表示 + P2P ライブ連携 完了)
-**バージョン**: 3.3.1 TV 同等津波情報表示システム
+**最終更新**: 2026年4月23日(v3.4 UI刷新・EEW可視化・自宅位置ETA対応)
+**完成度**: **90%達成**(UI 情報密度刷新 + EEW P/S 波可視化 + 余震確率 + 自宅位置 ETA)
+**バージョン**: 3.4.0 UI刷新・EEW可視化・自宅位置ETA版
 **アーキテクチャ**: セキュリティ強化 + TV 同等津波表示 + P2P ライブフィード
 **技術仕様**: 気象庁公式 70 地域 GeoJSON + 同期点滅アニメ + TV 風テロップ + WebSocket/REST 両経路
 **セキュリティ**: XSS 対策・CSP 厳格化・メモリリーク対策・統一エラーハンドリング
