@@ -125,31 +125,25 @@ Jisin -App/
 ├── tsunami-alert-system.js       # 津波警報システム
 ├── tsunami-data-store.js         # データ永続化
 ├── tsunami-manager.js            # 津波状態管理
-├── jma-tsunami-loader.js         # 津波データローダー
+├── jma-tsunami-loader.js         # 気象庁 70 地域 GeoJSON ローダー（v3.3 で TopoJSON 依存を撤去）
 ├── jma-xml-client.js             # JMA XMLクライアント
-├── jma-data-converter.js         # データ変換
 ├── multi-site-verification.js    # 多地点検証システム
 └── security-config.js            # セキュリティ設定
 
-# Legacy Files (v1.0 compatibility)
-test.html               # Test & Debug Interface
-script.js               # Legacy main script
-earthquake-api.js       # Legacy API communication
-notification.js         # Legacy notification system
-map.js                  # Legacy map functionality
-config.js               # Configuration management
-
 # Tsunami Warning System
-jma-tsunami-loader.js   # JMA TopoJSON Data Loader
-jma-data-converter.js   # Shapefile to TopoJSON Converter
+jma-tsunami-loader.js   # JMA 公式 70 地域 GeoJSON ローダー
 data/
-└── jma-tsunami-areas.topojson  # JMA Official Tsunami Forecast Areas (23KB)
+└── jma-tsunami-areas.geojson  # 気象庁公式 70 地域 津波予報区（10.5MB）
+
+# Conversion Scripts
+scripts/
+└── convert_jma_shapefile.py  # 気象庁 Shapefile → GeoJSON 変換（pyshp + shapely）
 
 # Documentation
-README.md               # Professional System Documentation
-requirements.md         # System Requirements Specification
-technical_specification.md # Professional Technical Specification
-ARCHITECTURE_REDESIGN.md   # Architecture Design Document
+README.md                     # Professional System Documentation
+requirements.md               # System Requirements Specification
+technical_specification.md    # Professional Technical Specification
+PRODUCTION_IMPLEMENTATION.md  # 実装完了報告書
 ```
 
 #### 2.1.2 プロフェッショナルダッシュボード レイアウト v2.0
@@ -477,10 +471,10 @@ lsof -ti:8080 | xargs kill -9
 3. **座標データ**: P2P APIデータの座標情報確認
 
 #### 9.4.4 津波データが表示されない場合
-1. **TopoJSONファイル**: `data/jma-tsunami-areas.topojson`の存在確認
-2. **TopoJSONライブラリ**: CDN読み込み確認
-3. **ブラウザキャッシュ**: データキャッシュクリアで再読み込み
-4. **フォールバック**: エラー時は基本データセットに自動切り替え
+1. **GeoJSON ファイル**: `data/jma-tsunami-areas.geojson` の存在確認
+2. **ネットワーク**: Leaflet CDN の読み込み確認
+3. **ブラウザキャッシュ**: ハードリロード（Cmd/Ctrl + Shift + R）で再読み込み
+4. **フォールバック**: `jma-tsunami-loader.js` の `getFallbackData()` が自動的に最低限のデータセットに切り替え
 
 ## 10. コスト見積
 
@@ -1027,9 +1021,7 @@ GeoJSON (10.5MB, MultiLineString, 約 26万頂点, 70 地域)
   - `getActiveAreas()` で警報中の地域のみを返す
 - **scripts/convert_jma_shapefile.py**: 気象庁 shapefile → GeoJSON 変換
   - pyshp + shapely、tolerance と出力先は CLI 引数で調整可
-- **scripts/convert_tsunami_topojson.py**: 旧 topojson(合成フェイク)調査スクリプト(履歴用)
 - **data/jma-tsunami-areas.geojson**: 70 予報区 MultiLineString (約 10.5 MB)
-- **data/jma-tsunami-areas.topojson**: 旧 14 地域合成プレースホルダー(未使用、残存)
 
 #### 14.1.3 パフォーマンス指標(実測)
 ```javascript

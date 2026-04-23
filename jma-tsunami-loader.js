@@ -1,10 +1,9 @@
 /**
  * 気象庁津波予報区GeoJSONローダー（製品版）
  *
- * 経緯: data/jma-tsunami-areas.topojson は arcs が絶対値(非差分)で格納された
- * 仕様違反の TopoJSON だったため、scripts/convert_tsunami_topojson.py で
- * 一度だけ正しい GeoJSON (data/jma-tsunami-areas.geojson) に変換して以降
- * それを直接読み込むよう変更した。topojson.min.js への依存は不要。
+ * v3.3 で気象庁公式 70 地域 Shapefile から scripts/convert_jma_shapefile.py で
+ * data/jma-tsunami-areas.geojson を生成し、本ローダーはそれを直接読み込む。
+ * topojson.min.js への依存は不要。
  */
 
 class JMATsunamiLoader {

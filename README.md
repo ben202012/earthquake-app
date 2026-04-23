@@ -483,7 +483,6 @@ Jisin -App/
 ├── tsunami-manager.js            # 津波状態管理
 ├── jma-tsunami-loader.js         # 津波予報区 GeoJSON ローダー（v3.3）
 ├── jma-xml-client.js             # JMA XMLクライアント
-├── jma-data-converter.js         # データ変換
 ├── multi-site-verification.js    # 多地点検証システム
 ├── security-config.js            # セキュリティ設定
 ├── test.html                     # テストシステム
@@ -538,7 +537,7 @@ Jisin -App/
 - **tsunami-alert-system.js**: 津波警報・通知システム（27KB）
 - **tsunami-data-store.js**: データ永続化・履歴管理（15KB）
 - **tsunami-manager.js**: 津波状態管理システム（16KB）
-- **jma-tsunami-loader.js**: 気象庁TopoJSONデータローダー（16KB）
+- **jma-tsunami-loader.js**: 気象庁 70 地域 GeoJSON ローダー（16KB、v3.3 で TopoJSON 依存を撤去）
 - **jma-xml-client.js**: JMA XMLデータクライアント（15KB）
 
 #### 統合システム
